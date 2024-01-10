@@ -1,0 +1,21 @@
+{
+    "debugBreakpointsState": {
+        "breakpoints": [
+            {
+                "id": 2,
+                "path": "D:/Workspace/R/scRNA-seq-analysis/scripts//Annotation.R",
+                "line_number": 41,
+                "function_steps": "7,3,2",
+                "function_name": "Annotation",
+                "state": 1,
+                "editor_state": 1,
+                "editor_line_number": 41,
+                "is_pending_debug_completion": false,
+                "needs_updated_steps": false,
+                "type": 0,
+                "is_package_breakpoint": false,
+                "package_name": ""
+            }
+        ]
+    }
+}
