@@ -1,53 +1,43 @@
-library(Seurat)
-library(ggplot2)
-# library(harmony)
-library(patchwork)
-library(ggpubr)
-library(ggrepel)
-library(SingleR)
-# library(RColorBrewer)
+source("scripts/librarypackage.R")
 
-library(dplyr)
-library(org.Hs.eg.db)
-library(clusterProfiler)
-library(pathview)
-library(ReactomePA)
-
-library(monocle3)
-library(SeuratWrappers)
-library(CellChat)
-
-library(ShinyCell)
-
-# function_dir：函数的R脚本文件路径
-function_dir <- "scripts/"
-source(paste0(function_dir,"/ReadData.R"))
-source(paste0(function_dir,"/Integration.R"))
-source(paste0(function_dir,"/QualityControl.R"))
-source(paste0(function_dir,"/DimensionalityReduction.R"))
-source(paste0(function_dir,"/Clustering.R"))
-source(paste0(function_dir,"/DifferentialExpressing.R"))
-source(paste0(function_dir,"/Annotation.R"))
-source(paste0(function_dir,"/Enrich.R"))
-source(paste0(function_dir,"/TrajectoryAnalysis.R"))
-source(paste0(function_dir,"/CellCommunication.R"))
-source(paste0(function_dir,"/analysis_scrnaseq.R"))
-# rm(function_dir)
-
-# analysis
-analysis_scrnaseq(
-  data_name = "chicken3",
-  data_dir = "E:/Data/PlatformData/chicken/chicken3/",
-  results_dir = NULL,
-  pc_num = 50,resolution = 0.5,
-  ref_singler_dir = "celldex_ref_dataset/",
-  ref_cell_dex = "MouseRNAseqData"
-)
-Data <- ReadData(
-  data_name = "case",
-  data_dir = "E:/Data/PlatformData/chicken/chicken1. Comparative single-cell transcriptomic analysis reveals/",
+# read data
+Data <- ReadData_10X(
+  data_dir = "D:/Data/scRNA-seq/mouse/GSE226169_RAW/",
+  filename = "GSM7066259", # 10X的三个文件名的前缀
+  data_name = "GSM7066259",
+  Species = "mouse", # "human"; "mouse"; "zebrafish"
   results_dir = NULL
 )
+
+# analysis
+Data <- analysis_scrnaseq(
+  Data,
+  min_nFeature = 100, min_nCount = 100, 
+  max_percent_mito = 30, max_percent_ribo = 50,
+  pc_num = 50,resolution = 0.5,
+  ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/",
+  ref_cell_dex = "ImmGenData",
+  ref_markers = NULL
+)
+
+Plot_seurat(Data = Data, figure_format = "png")
+
+info <- Data@tools$info
+rmarkdown::render(
+  input = "scripts/report.Rmd",
+  params = list(info = info),
+  output_file = paste0(
+    info$results_dir, 
+    info$data_name,
+    "_report"
+  )
+)
+
+# 并行
+library(future)
+plan(sequential)
+plan(multisession, workers = 2)
+plan()
 
 # 读取数据-----
 ## data_name ：数据名称，默认为"case"，名称不宜过长

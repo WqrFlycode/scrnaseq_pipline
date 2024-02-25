@@ -1,4 +1,4 @@
-integration <- function(seurat_objects_path, results_dir, data_name) {
+merge_data <- function(seurat_objects_path, results_dir, data_name) {
   data <- lapply(
     seurat_objects_path,
     function(x){

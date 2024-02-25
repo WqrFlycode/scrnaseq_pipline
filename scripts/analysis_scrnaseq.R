@@ -1,25 +1,54 @@
-analysis_scrnaseq <- function(seurat_object_dir,
-                              pc_num = 50, resolution = 0.5,
+analysis_scrnaseq <- function(Data,
+                              min_nFeature = 100, min_nCount = 100, 
+                              max_percent_mito = 30, max_percent_ribo = 50,max_percent_hb = 30,
+                              pc_num = 50, resolution = 0.8,
                               ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL){
-  cat("\n %%%%% read data %%%%% \n")
-  Data <- readRDS(seurat_object_dir)
+  info <- Data@tools$info
+  results_path <- paste0(info$results_dir, info$data_name)
+  sink(file = paste0(results_path, "_analysis_log.txt"),split = TRUE)
   
-  qc_index <- c("nFeature_RNA", "nCount_RNA", "percent.mito", "percent.ribo")
+  info$raw_dim <- dim(Data)
+  names(info$raw_dim) <- c("gene", "cell")
+  info$qc_index <- c(
+    min_nFeature, min_nCount, max_percent_mito, max_percent_ribo
+  )
+  names(info$qc_index) <- c(
+    "min_nFeature", "min_nCount", "max_percent_mito", "max_percent_ribo"
+  )
+  info$pc_num <- pc_num
+  info$cluster_resolution <- resolution
+  info$ref_singler_dir <- ref_singler_dir
+  info$ref_cell_dex <- ref_cell_dex
+  info$ref_markers <- ref_markers
+  
+  # QC
+  # qc_index <- c("nFeature_RNA", "nCount_RNA", "percent.mito", "percent.ribo")
   # compute the proportion of mito-genes expression
-  Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = "^MT-") 
+  if(! "percent.mito" %in% names(Data@meta.data)){
+    Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = "^MT-") 
+  }
   # compute the proportion of ribo-genes expression
-  Data[["percent.ribo"]] <- PercentageFeatureSet(Data, pattern = "^RP[SL]")
-  # results is percentage times 100
+  if(! "percent.ribo" %in% names(Data@meta.data)){
+    Data[["percent.ribo"]] <- PercentageFeatureSet(Data, pattern = "^RP[SL]")
+  }
+  # 计算红血细胞基因比例
+  if(! "percent.hb" %in% names(Data@meta.data)){
+    Data[["percent.hb"]] <- PercentageFeatureSet(Data, pattern = "^Hb[^(p)]")
+  }
+  # percentage times 100
   
   cat("\n %%%%% run quality control %%%%% \n")
   Data <- subset(
     Data,
-    subset = nFeature_RNA > 100 & 
-      nCount_RNA > 100 & # nCount_RNA < 1e5 &
-      percent.mito < 30 &
-      percent.ribo < 50,
+    subset = nFeature_RNA > min_nFeature & 
+      nCount_RNA > min_nCount & # nCount_RNA < 1e5 &
+      percent.mito < max_percent_mito &
+      percent.ribo < max_percent_ribo &
+      percent.hb < max_percent_hb,
     features = row.names(Data)[rowSums(GetAssayData(Data,slot = "counts")>0)>0]
   )
+  info$filter_dim <- dim(Data)
+  names(info$filter_dim) <- c("gene", "cell")
   
   # run Normalize-----
   cat("\n %%%%% run Normalize %%%%% \n")
@@ -31,8 +60,7 @@ analysis_scrnaseq <- function(seurat_object_dir,
   
   # run Scale-----
   cat("\n %%%%% run Scale %%%%% \n")
-  Data <- ScaleData(Data, features = rownames(Data))
-  
+  Data <- ScaleData(Data)
   
   # run PCA----
   cat("\n %%%%% run PCA %%%%% \n")
@@ -46,9 +74,13 @@ analysis_scrnaseq <- function(seurat_object_dir,
     cat("\n 1个样本 \n")
     # run cluster-----
     cat("\n %%%%% run FindNeighbors %%%%% \n")
-    Data <- FindNeighbors(Data, dims = 1:50)
+    Data <- FindNeighbors(Data, dims = 1:pc_num)
     cat("\n %%%%% run FindClusters %%%%% \n")
-    Data <- FindClusters(Data,resolution = resolution)
+    Data <- FindClusters(Data, resolution = resolution)
+    cat("\n %%%%% run UMAP %%%%% \n")
+    Data <- RunUMAP(Data, dims = 1:pc_num)
+    cat("\n %%%%% run TSNE %%%%% \n")
+    Data <- RunTSNE(Data)
   } else {
     # run correct batch-----
     cat("\n ", nsample ,"个样本 \n 矫正批次效应 \n")
@@ -57,91 +89,93 @@ analysis_scrnaseq <- function(seurat_object_dir,
     
     # run UMAP based on harmony-----
     cat("\n %%%%% run UMAP %%%%% \n")
-    Data <- RunUMAP(Data, dims = 1:50, reduction = "harmony")
-    # TSNE
-    # Data <- RunTSNE(Data, dims = 1:10, reduction = "harmony")
+    Data <- RunUMAP(Data, dims = 1:pc_num, reduction = "harmony")
+    cat("\n %%%%% run TSNE %%%%% \n")
+    Data <- RunTSNE(Data, dims = 1:pc_num, reduction = "harmony")
     cat("\n %%%%% run Neighbors %%%%% \n")
-    Data <- FindNeighbors(Data, dims = 1:50, reduction = "harmony")
+    Data <- FindNeighbors(Data, dims = 1:pc_num, reduction = "harmony")
     cat("\n %%%%% run Clusters %%%%% \n")
-    Data <- FindClusters(Data,resolution = resolution)
+    Data <- FindClusters(Data, resolution = resolution)
   }
   
-  metadata_name <- NULL
-  if (!is.null(ref_singler_dir)) {
-    cat("\n %%%%% run SingleR %%%%% \n")
-    ref <- ref_cell_dex
-    
-    annotation_dir <- paste0(results_dir,"_annotation_",ref,".rds")
-    metadata_name <- append(
-      metadata_name,
-      values = paste0(c("cell_","cluster_"),ref)
-    )
-    
-    # read ref
-    ref_celldex <- readRDS(paste0(ref_singler_dir, ref, ".rds"))
-    # cell annotation------
-    cat("\n %%%%% run annotation by cell %%%%% \n")
-    cell_annotation <- SingleR(test = Data@assays$RNA@data, ref = ref_celldex,
-                               assay.type.test = 1, labels = ref_celldex$label.main)
-    Data <- AddMetaData(Data,metadata = cell_annotation$labels,col.name = metadata_name[1])
-    # run cluster annotation------
-    cat("\n %%%%% run annotation by cluster %%%%% \n")
-    cluster_annotation <- SingleR(test = Data@assays$RNA@data, ref = ref_celldex, 
-                                  clusters = Data$seurat_clusters, # 按类群注释
-                                  assay.type.test = 1, labels = ref_celldex$label.fine)
-    clusters <- Data$seurat_clusters
-    levels(clusters) <- cluster_annotation$labels
-    clusters <- factor(clusters)
-    Data <- AddMetaData(Data,metadata = clusters,col.name = metadata_name[2])
-    
-    
-  }
+  # run annotation-----
+  cat("\n %%%%% run annotation %%%%% \n")
+  Data <- Annotation(
+    Data = Data,
+    ref_singler_dir = ref_singler_dir, 
+    ref_cell_dex = ref_cell_dex, 
+    ref_markers = ref_markers, 
+    figure_format = "png"
+  )
+  # levels(Data$singler_by_cluster) <- sapply(
+  #   strsplit(levels(Data$singler_by_cluster), ":"), 
+  #   function(x) x[1]
+  # )
+  info$celltypes <- list(
+    by_seurat = levels(Data$seurat_clusters),
+    by_cell = unique(Data$singler_by_cell),
+    by_cluster = levels(Data$singler_by_cluster)
+  )
   
-  if (!is.null(ref_markers)) {
-    print("根据已知markers注释------------------------------------------------")
-    metadata_name <- append(
-      metadata_name,
-      values = "ref_markers_clusters"
+  # run find marker-----
+  all.markers <- list()
+  cat("\n %%%%% run FindAllMarkers by seurat cluster %%%%% \n")
+  Data.all.markers.by.cluster <- FindAllMarkers(
+    Data, 
+    features = Data@assays$RNA@var.features
+  )
+  all.markers$by.cluster <- Data.all.markers.by.cluster
+  
+  Idents(Data) <- Data@meta.data[,"singler_by_cluster"]
+  cat("\n %%%%% run FindAllMarkers by cell types %%%%% \n")
+  Data.all.markers.by.celltype <- FindAllMarkers(
+    Data, 
+    features = Data@assays$RNA@var.features
+  )
+  all.markers$by.celltype <- Data.all.markers.by.celltype
+  
+  all.markers_dir <- paste0(results_path, "_all.markers.rds")
+  info$all.markers_dir <- all.markers_dir
+  saveRDS(all.markers, all.markers_dir)
+  Data@tools$all.markers <- all.markers
+  
+  Idents(Data) <- Data@meta.data$seurat_clusters
+  
+  info$by_cluster <- "seurat_clusters"
+  # run TrajectoryAnalysis-----
+  tryCatch({
+    cds <- TrajectoryAnalysis(
+      Data = Data, by_cluster = info$by_cluster
     )
-    
-    CellTypeScoreMatrix <- matrix(
-      nrow = length(levels(Data$seurat_clusters)),
-      ncol = length(ref_markers),
-      dimnames = list(levels(Data$seurat_clusters), names(ref_markers))
+    cds_dir <- paste0(results_path, "_cds.rds")
+    info$cds_dir <- cds_dir
+    saveRDS(cds, cds_dir)
+    Data@tools$cds <- cds
+  }, error = function(e){
+    message("%%% TrajectoryAnalysis error %%%")
+  })
+  
+  
+  # CellCommunication-----
+  tryCatch({
+    cellchat <- CellCommunication(
+      Data = Data, by_cluster = "singler_by_cluster"
     )
-    
-    Data.all.markers <- readRDS(
-      paste0(
-        Data@tools$results_dir,
-        "/DifferentialExpressing/",
-        Data@tools$data_name,
-        "_all_markers.rds"
-      )
-    )
-    
-    for (i in levels(Data$seurat_clusters)) {
-      cluster_markers <- Data.all.markers[Data.all.markers$cluster == i,]
-      cluster_markers <- arrange(cluster_markers, desc(abs(avg_log2FC)), p_val_adj)
-      for (j in 1:length(ref_markers)) {
-        scores <- sapply(ref_markers[[j]], function(x) {
-          if (x %in% cluster_markers$gene) {
-            which(cluster_markers$gene == x)/nrow(cluster_markers)
-          } else {
-            0
-          }
-        })
-        CellTypeScoreMatrix[i,j] <- sum(scores)
-      }
-    }
-    ClusterCellType <- apply(CellTypeScoreMatrix, 1, function(x) {names(which.max(x))})
-    clusters <- Data$seurat_clusters
-    levels(clusters) <- ClusterCellType
-    clusters <- factor(clusters)
-    Data <- AddMetaData(
-      Data,
-      metadata = clusters,
-      col.name = "ref_markers_clusters"
-    )
-  }
-  saveRDS(Data, results_dir)
+    cellchat_dir <- paste0(results_path, "_cellchat.rds")
+    info$cellchat_dir <- cellchat_dir
+    saveRDS(cellchat, cellchat_dir)
+    Data@tools$cellchat <- cellchat
+  }, error = function(e){
+    message("%%% CellChat error %%%")
+  })
+  
+  # save info
+  saveRDS(info, paste0(results_path, "_info.rds"))
+  Data@tools$info <- info
+  
+  # save Data
+  saveRDS(Data, paste0(results_path, "_results.rds"))
+  cat("\n %%%%% analysis finished %%%%% \n")
+  sink()
+  return(Data)
 }

@@ -1,0 +1,69 @@
+# Calling Peaks with ArchR
+调用峰是 ATAC-seq 数据分析中最基本的过程之一。 由于每个细胞的 scATAC-seq 数据本质上是二进制的（可访问或不可访问），因此我们无法在单个细胞的基础上调用峰值。 
+因此，我们在前一章中定义了细胞组，通常是簇。 
+此外，我们创建了伪批量重复，以允许我们评估峰值调用的再现性。
+
+## Calling Peaks w/ Macs2
+如上所述，我们使用 addReproduciblePeakSet() 函数在 ArchR 中生成可重现的峰值集。 默认情况下，ArchR 尝试使用 MACS2 调用峰值； 
+然而，ArchR 还实现了自己的本机峰值调用程序，可以在无法安装 MACS2 时使用（例如，我们尚未在 Windows 上成功安装 MACS2） - 这种替代峰值调用方法将在下一节中介绍。
+
+要使用 MACS2 调用峰值，ArchR 必须能够找到 MACS2 可执行文件。 
+首先，ArchR 查看您的 PATH 环境变量。 
+如果此操作不成功，ArchR 会尝试确定您是否使用 pip 或 pip3 安装了 MACS2。 
+如果这些都不成功，ArchR 就会放弃并提供错误消息。 
+如果您安装了 MACS2 并且 ArchR 找不到它，您应该通过 pathToMacs2 参数提供 addReproduciblePeakSet() 函数的路径。
+
+**安装MACS2**
+
+```{r eval=FALSE}
+# BiocManager::install("Herper")
+# library(Herper)
+# install_CondaTools(
+#   tools="macs2", 
+#   env="PeakCalling_analysis", 
+#   pathToMiniConda="D:/ProgramFiles/miniconda3"
+# )
+pathToMacs2 <- findMacs2()
+```
+
+确定了 MACS2 的路径后，我们就可以使用 MACS2 创建可重现的合并峰值集（约 5-10 分钟）。 为了避免细胞数量很少的伪批量重复产生的偏差，我们可以通过peaksPerCell参数为每个细胞调用的峰值数量上限提供截止值。 这可以防止单元很少的簇向合并的峰集贡献大量低质量峰。 还有许多其他参数可以在 addReproduciblePeakSet() 中调整 - 尝试 ?addReproduciblePeakSet 了解更多信息。
+
+每个 ArchRProject 对象只能包含一个峰值集。 因此，我们将 addReproduciblePeakSet() 的输出分配给我们想要的 ArchRProject。 如果您想尝试不同的峰值集，则必须保存 ArchRProject 的副本，从而也复制 Arrow 文件。 虽然这确实使用了更多的磁盘存储空间，但考虑到 Arrow 文件的结构以及 Arrow 文件中峰值矩阵信息的存储，这是不可避免的。
+```{r eval=FALSE}
+projHeme4 <- addReproduciblePeakSet(
+    ArchRProj = projHeme4, 
+    groupBy = "Clusters2", 
+    pathToMacs2 = pathToMacs2
+)
+```
+为了将这个峰值集检索为 GRanges 对象，我们使用 getPeakSet() 函数。 该峰集包含每个峰所源自的组的注释。 然而，这些注释本质上并不意味着给定的峰仅在该组中被调用，而是注释的组对该峰调用具有最高的归一化显着性。
+```{r eval=FALSE}
+getPeakSet(projHeme4)
+```
+
+# Calling Peaks w/ TileMatrix
+如前所述，ArchR 还实现了自己的原生峰值调用程序。 虽然我们已针对 MACS2 对此峰值调用程序进行了基准测试并注意到非常相似的性能，但除非绝对必要，否则我们不建议使用此本机峰值调用程序。
+
+ArchR 原生峰值调用程序在 500-bp TileMatrix 上调用峰值，我们向 addReproduciblePeakSet() 指示我们希望通过peakMethod 参数使用此峰值调用程序。 请注意，我们不会将输出存储到 projHeme4 对象中，因为我们不打算保留此峰值集，并且此分析仅用于说明目的。 存储到 ArchRProject 对象中将覆盖先前存储在 projHeme4 中的可重现峰值集。
+```{r eval=FALSE}
+projHemeTmp <- addReproduciblePeakSet(
+    ArchRProj = projHeme4, 
+    groupBy = "Clusters2",
+    peakMethod = "Tiles",
+    method = "p"
+)
+```
+
+***
+input:
+
+- projHeme4
+
+output:
+
+- projHeme4
+- HemeTutorial/GroupCoverages/
+- ArchR-addGroupCoverages-*.log
+
+***
+所谓的Motifs就是那些可以结合TF的DNA序列，而TF结合的位置称为TFBS（TF binding sites）

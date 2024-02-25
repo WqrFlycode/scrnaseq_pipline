@@ -1,0 +1,383 @@
+---
+title: "单细胞RNA序列（scRNA-seq）分析报告"
+output:
+  html_document:
+    toc: true
+    toc_float: 
+      collapsed: TRUE
+      smooth_scroll: FALSE
+    number_sections: true
+    fig_caption: true
+params:
+  info: ""
+---
+
+```{r include=FALSE}
+# info <- readRDS("D:/Data/scRNA-seq/pbmc3k/pbmc3k_results/pbmc3k_info.rds")
+info <- params$info
+dir <- paste0(info$results_dir, "/plots")
+```
+
+# 概述 {.tabset .tabset-pills}
+
+在得到单细胞基因表达矩阵之后，使用Seurat软件识别与解释单细胞原始的表达矩阵中异质性的来源，该步骤主要包括细胞与基因的质量控制，降维与聚类，差异分析等。 在得到不同类的标记基因后使用Singler软件对不同的细胞类群进行细胞类型注释。 在完成与差异分析后使用ClusterProfiler软件对挑选出的基因集进行GO分析与通路分析。 使用monocle3软件根据单细胞基因表达的相似性进行拟时序分析来说明细胞类群之间的关系。 最后使用cellchat软件进行细胞通讯分析。
+
+样本**`r info$data_name`**共包含**`r info$raw_dim[1]`**个基因和**`r info$raw_dim[2]`**个细胞。
+
+# 质量控制 {.tabset .tabset-pills}
+
+## 质量控制指标
+
+为了保证后续分析的可靠性和准确性，首先需要进行质量控制来剔除低质量细胞，质量控制的指标主要有测到的转录本分子总数，测到的基因总数，来源于线粒体基因的转录本所占比例。
+
+1.  转录本总数(nCount_RNA)：每个细胞转录本总数过低意味着有可能是背景污染，数量过高则可能是多细胞，通过设置阈值，剔除表达量过低或过高的细胞。设置最低阈值为100，最高阈值不限。
+
+2.  基因总数(nFeature_mt)：设置最低阈值为100，最高阈值不限。
+
+3.  线粒体基因比例(percent.mt)：线粒体基因表达比例高的细胞，往往意味着是坏死或者细胞膜破裂的细胞，因此通过设置线粒体基因的表达比例过滤掉这些低质量的细胞。该指标的阈值设置为30%，即保留线粒体基因比例不超过30%的细胞。
+
+4.  核糖体基因比例(percent.ribo)：核糖体的基因表达比例则代表着细胞rRNA污染的比例，该值较高代表着mRNA没有得到足够的富集。该指标的阈值设置为50%。
+
+小提琴图展示指标的分布情况，纵轴为质量控制指标的值，横轴为样本名称，小提琴图中较宽的部分代表观测值取值的概率较高，较窄的部分则对应于较低的概率。 在质量控制前后分别画出每个指标的小提琴图，通过对比筛选前后的小提琴图可以看出细胞筛选的结果。
+
+经过质量控制，
+剔除了 **`r info$raw_dim[1]-info$filter_dim[1]`** 个基因，
+剩余 **`r info$filter_dim[1]`** 个基因，
+剔除了 **`r info$raw_dim[2]-info$filter_dim[2]`** 个细胞，
+剩余 **`r info$filter_dim[2]`** 个细胞。
+
+```{r echo=FALSE}
+dir_QC <- paste0(dir, "/1_QualityControl/")
+files <- list.files(dir_QC)
+knitr::include_graphics(paste0(dir_QC, files)[grep("after_qc", files)])
+```
+
+## 质量控制指标关系
+
+对过滤后的细胞基因数，表达量，线粒体与核糖体比例进行比较，并利用散点图对其关系进行描述。 经过合理过滤后保留下来的细胞这四项指标之间会存在较强的相关性。 从而确保后续分析的科学性与正确性。
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_QC, files)[grep("qc_index_scatter", files)])
+```
+
+左图是转录本数与基因数的散点图，中间是转录本总数与线粒体基因比例的散点图，右图是转录本总数与核糖体基因比例的散点图。
+
+# 降维 {.tabset .tabset-fade .tabset-pills}
+```{r DR, echo=FALSE}
+dir_DR <- paste0(dir, "/2_DimensionalityReduction/")
+files <- list.files(dir_DR)
+```
+
+## 筛选高变基因
+
+细胞为了保证自身的正常功能均会高度表达一些维持状态的基因，这些基因表达量很高但是并不能显示不同细胞的特点，因此需要鉴定出细胞间表达高度变化的基因，并在研究中基于这部分基因进行后续分析。 我们计算每一个基因的均值和方差，并且获取其关系，从而鉴定出高度变化的基因。
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DR, files)[grep("hvg", files)])
+```
+
+在识别出高度变化的基因后将数据归一化到均值为0方差为1，从而消除基因表达的绝对量的影响。
+
+## 主成分分析
+
+主成分分析（PCA，Principal Component Analysis），是一种应用方差分解，对多维数据进行降维，从而提取出数据中最主要结构的方法。 应用PCA分析，能够提取出最大程度反映细胞间表达模式差异的几个坐标轴，将多维数据的差异反映在低维度上，进而揭示复杂数据背后的简单规律。 主成分数量的选择可以依据碎石图进行选择。
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DR, files)[grep("elbow", files)])
+```
+
+碎石图（上图）展示每个主成分对变异的贡献程度，横轴为各个主成分，纵轴为标准差。 标准差趋于平稳前的主成分是较为重要的主成分。
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DR, files)[grep("dimloading", files)])
+```
+
+上图为PCA降维后不同主成分变异来源基因图，根据该图可以确定出哪些基因对该主成分贡献最大。
+
+```{r echo=FALSE}
+# knitr::include_graphics(paste0(dir_DR, files)[grep("dimheatmap", files)])
+# 上图为变异来源基因热图，为各个细胞对应的基因的主成分分数。
+# 通过这两幅图可以确定出异质性的主要来源并在后续分析中确定所要选择的主成分。
+```
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DR, files)[grep("pca", files)])
+```
+
+以横轴为第一主成分，纵轴为第二主成分将细胞展示在散点图（上图）中。
+
+# 聚类 {.tabset .tabset-fade .tabset-pills}
+```{r cluster, echo=FALSE}
+dir_CL <- paste0(dir, "/3_Clustering/")
+files <- list.files(dir_CL)
+```
+
+图聚类算法包括两步：首先用PCA降维的数据构建一个细胞间的k近邻稀疏矩阵，即将一个细胞与其欧式距离上最近的k个细胞聚为一类，然后在此基础上用Louvain算法进行模块优化，旨在找到图中高度连接的模块。最后通过层次聚类将位于同一区域内没有差异表达基因的cluster进一步融合，重复该过程直到没有clusters可以合并。
+
+聚类结果分别使用t-分布邻域嵌入算法（tSNE，t-Stochastic Neighbor Embedding）与UMAP（一致流形逼近与投影，Uniform Manifold Approximation and Projection）算法进行二维展示，tSNE与UMAP
+是目前机器学习领域非常流行的对高维度数据进行降维的非线性非监督降维方法，可以有效地将高维度数据转换成二维图像。
+在PCA降维后使用t-SNE与UMAP进行二维可视化展示，细胞之间的基因表达模式越相似，在tSNE/UMAP图中的距离也越接近。
+
+## UMAP
+
+UMAP的核心思想与tSNE相似，都是在衡量高维空间中点的相似性后在低维空间中对数据进行排序。但是UMAP是构建数据的高维图，然后在低维图表示时尽可能保留高维空间中的相似性。与tSNE相比UMAP可以更清楚地将组彼此分开。 降维完成后，使用了基于图的聚类方法，将细胞嵌入图后使用K-近邻方法在表达相似的细胞之间画出边缘，从而将这个图分割成高度关联的类别。
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_CL, files)[grep("umap", files)])
+```
+
+## tSNE
+
+tSNE的基本思想是如果高维数据两个数据点很相似，那么在低维空间中两个点距离很近。通过高维空间中点之间距离转换成的条件概率来衡量相似性，在低维空间中，通过条件概率计算样本点之间距离即对数据进行了低维映射，在该映射过程中引入效果更好的t分布即同一簇内的点会聚合的更紧密而不同簇的点更加疏远的效果。
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_CL, files)[grep("tsne", files)])
+```
+从图中可以看出，聚类后所有细胞被分成**`r length(info$celltypes)`**类。
+
+# 细胞注释 {.tabset .tabset-fade .tabset-pills}
+```{r echo=FALSE}
+dir_A <- paste0(dir, "/4_Annotation/")
+files <- list.files(dir_A)
+```
+
+## 单个细胞注释
+
+SingleR是对单细胞转录组数据进行细胞类型自动注释的R包。
+它通过已知类型的细胞样本作为参考数据集，对数据集中与参考集相似的细胞进行标记注释。
+对每个细胞进行如下处理：
+
+1.  计算每个细胞的基因表达与参考细胞数据集表达谱之间的相关性。
+
+2.  对每种细胞类型的得分进行计算并取固定分位数作为细胞类型得分。
+
+3.  对所有的标签重复此操作，然后将得分最高的标签作为此细胞的注释。
+
+使用R包SingleR对细胞进行注释，SingleR提供了针对人和小鼠多种组织的细胞类型的参考数据集，可以根据实际需要选择使用，这里参考数据集分别选择MonacoImmuneData和DatabaseImmuneCellExpressionData进行注释。 
+
+对每个细胞单独注释结果如下：
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_A, files)[grep("singler_by_cell", files)])
+```
+上图为参考MonacoImmuneData的注释结果，下图为参考DatabaseImmuneCellExpressionData的注释结果。
+左侧为注释后的tSNE图，右侧为注释后的UMAP图，不同的颜色代表不同的细胞类型。
+
+## 类群注释
+下面直接对聚类后的类群进行注释。
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_A, files)[grep("singler_by_cluster", files)])
+```
+上图为参考MonacoImmuneData的注释结果，下图为参考DatabaseImmuneCellExpressionData的注释结果。
+
+堆积图展示每类细胞的比例,横轴为样本，纵轴为细胞比例。
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_A, files)[grep("barplot", files)])
+```
+
+# 差异基因 {.tabset .tabset-fade .tabset-pills}
+```{r echo=FALSE}
+dir_DE <- paste0(dir, "/5_DifferentialExpressing/")
+files <- list.files(dir_DE)
+```
+
+## 气泡图
+气泡图展示了各类细胞的差异基因，横轴为细胞类型，纵轴为基因名称，气泡的大小为某个细胞类型中表达某个基因的细胞的百分比，颜色越深表示基因在每个细胞中的平均表达量越高。
+
+**各细胞簇的差异基因：**
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DE, files)[grep("dots_cluster", files)])
+```
+
+**各细胞类型的差异基因：**
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DE, files)[grep("dots_celltype", files)])
+```
+
+## 小提琴图
+通过比较某一个类中的细胞与剩余其他类中细胞的表达谱的差异，可以找到各个类中显著区别于其他类细胞的基因，并将其定义为该类的生物学标记基因。
+将每个类的差异基因按差异倍数排序，并用小提琴图展示每个类中排名前三的差异基因在各个类中的分布情况。
+
+下图中每行为一个类中排名前三的基因小提琴图
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DE, files)[grep("deg_violin_cluster", files)])
+```
+
+## UMAP分布图
+<!--
+我们利用热图对这些基因进行可视化，并绘制基因在所有类中表达分布图与映射图来详细阐述标记基因的表达情况。
+-->
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DE, files)[grep("de_genes_umap", files)])
+```
+
+## 火山图
+
+```{r echo=FALSE ,out.width = "50%"}
+knitr::include_graphics(paste0(dir_DE, files)[grep("volcano_cluster", files)])
+```
+
+## 热图
+
+每个类别中差异基因在所有细胞中的表达热图
+
+```{r echo=FALSE}
+knitr::include_graphics(paste0(dir_DE, files)[grep("heatmap", files)])
+```
+
+# 富集分析 {.tabset .tabset-fade .tabset-pills}
+```{r echo=FALSE}
+dir_E <- paste0(dir, "/6_Enrich/")
+files <- list.files(dir_E)
+```
+在生物体内，不同基因相互协调行使其生物学功能，通过通路显著性富集能确定差异表达基因参与的最主要生化代谢途径和信号转导途径。
+
+**GO功能富集**
+
+GO(Gene Ontology)是描述基因功能的综合性数据库，可分为生物过程（Biological Process）和细胞组成（Cellular Component）分子功能（Molecular Function）三个部分。
+GO 功能显著性富集分析给出与基因集背景相比，在差异表达基因中显著富集的GO功能 条目，从而给出差异表达基因与哪些生物学功能显著相关。
+该分析首先把所有差异表达基因向GO数据库的各个条目映射，计算每个通路的基因数目，然后找出与整个基因集背景相比，在差异表达基因中显著富集。
+GO富集分析原理是使用超几何分布检验的方法获得显著富集的GO条目。
+
+富集程度通过GeneRatio、p.adjust和富集到此通路上的基因个数来衡量。 其中GeneRatio指差异表达的基因中位于该通路条目的基因数目与所有有注释基因中位于该通路条目的基因总数的比值。 p值是做过多重假设检验校正之后的P值，p值的取值范围为[0，1]，越接近于零，表示富集越显著，p值小于0.05为显著富集。
+
+富集结果分别用柱状图和气泡图的形式展示。
+柱状图的纵轴表示通路条目，横轴表示富集在通路上的基因数目，条的颜色表示p值的大小，p值越小颜色越接近红色。
+气泡图的纵轴表示通路名称，横轴表示通路对应的GeneRatio，p值的大小用点的颜色来表示，与柱状图相同，每个通路下包含的差异基因的多少用点的大小来表示。
+
+## GO_MF
+
+Molecular function富集结果：
+```{r echo=FALSE}
+filename <- "GO_MF"
+if(length(grep(filename, files)) >= 1){
+  knitr::include_graphics(paste0(dir_E, files)[grep(filename, files)])
+}
+# knitr::include_graphics(paste0(dir_E, files)[grep("IgG_1_cluster_1_GO_MF.pdf", files)])
+```
+
+## GO_BP
+Biological process富集结果：
+```{r echo=FALSE}
+filename <- "GO_BP"
+if(length(grep(filename, files)) >= 1){
+  knitr::include_graphics(paste0(dir_E, files)[grep(filename, files)])
+}
+```
+
+## GO_CC
+Cellular component富集结果：
+```{r echo=FALSE}
+filename <- "GO_CC"
+if(length(grep(filename, files)) >= 1){
+  knitr::include_graphics(paste0(dir_E, files)[grep(filename, files)])
+}
+```
+
+## KEGG
+KEGG(Kyoto Encyclopedia of Genes and Genomes)是有关通路的主要公共数据库，其中整合了基因组化学和系统功能信息等众多内容。 通路显著性富集分析以KEGG通路为单位，应用超几何分布检验方法，找出差异基因相对于所有注释的基因显著富集的通路，KEGG通路富集同样以p值小于0.05作为显著性富集的阈值。
+
+```{r echo=FALSE}
+filename <- "kegg"
+if(length(grep(filename, files)) >= 1){
+  knitr::include_graphics(paste0(dir_E, files)[grep(filename, files)])
+}
+```
+
+## Reactome
+REACTOME是一个开源、人工整理并经过同行评审的通路数据库。
+目标是为各个通路提供可视化、可解释的分析，以支持基础研究、临床研究、基因组分析、建模、系统生物学等。
+```{r echo=FALSE}
+filename <- "reactome"
+if(length(grep(filename, files)) >= 1){
+  knitr::include_graphics(paste0(dir_E, files)[grep(filename, files)])
+}
+```
+
+# 轨迹分析 {.tabset .tabset-fade .tabset-pills}
+```{r echo=FALSE}
+dir_T <- paste0(dir, "/7_Trajectory/")
+files <- list.files(dir_T)
+```
+
+细胞轨迹分析可以通过构建细胞间的变化轨迹来重塑细胞随着时间的变化过程，帮助人们从单细胞水平推断细胞之间的演化及分化过程。
+
+拟时序分析是一种用于模拟细胞之间发育过程的方法，在细胞分裂发育过程中，都处在状态转换的过程中，假设该过程产生的蛋白和代谢物是动态保守的，那么我们可以利用该连续发生的状态转换来模拟细胞动态变化的过程，即重建了分化轨迹。
+
+## 细胞轨迹图
+左图为构建的细胞轨迹，黑色线显示的是graph的结构，图中点的颜色表示细胞类型。
+右图为所有细胞的拟时序图，颜色的深浅表示拟时间顺序，数字带白色圈表示不同结局，数字带黑色圈表示分叉点。
+```{r echo=FALSE}
+filename <- "trojectory_cluster"
+if(length(grep(filename, files)) == 1){
+  knitr::include_graphics(paste0(dir_T, files)[grep(filename, files)])
+}
+filename <- "trojectory_pseudotime"
+if(length(grep(filename, files)) == 1){
+  knitr::include_graphics(paste0(dir_T, files)[grep(filename, files)])
+}
+```
+
+# 细胞通讯分析 {.tabset .tabset-fade .tabset-pills}
+```{r echo=FALSE}
+dir_C <- paste0(dir, "/8_CellCommunication/")
+files <- list.files(dir_C)
+```
+<!--
+1.细胞通讯是什么？有何意义？
+2.如何分析？
+3.结果解读？
+-->
+
+细胞通讯分析可以帮助我们了解细胞与细胞之间的互作关系，解析细胞间通信网络。
+揭示发育过程中各类细胞的相互作用、探索肿瘤免疫微环境、挖掘疾病潜在的治疗靶点。
+
+1.    细胞通讯揭示发育中的细胞相互作用：在发育研究中，可以选择不同发育时间点或者不同亚群研究各类细胞间的相互作用。
+
+2.    探究肿瘤免疫微环境：可以通过细胞通讯分析挑选相互租用最强的细胞亚群，分析其在肿瘤免疫微环境中的作用机制。
+
+3.    挖掘疾病治疗靶点：在疾病研究中可以通过细胞通讯分析探索疾病潜在的治疗靶点。
+
+CellChat是一种能够从单细胞 RNA序列（scRNA-seq）数据中定量推断和分析细胞间通讯网络的工具。
+CellChat利用网络分析和模式识别方法，预测细胞的主要信号输入和输出，以及这些细胞和信号如何协调功能。
+细胞通讯模型计算：CellChat对通信概率进行建模，并识别重要通信。
+
+1.    交叉引用配体-受体相互作用数据库；
+
+2.    使用质量作用定律（law of mass action）定量细胞通讯概率；
+
+3.    推断统计学和生物学上显著的细胞通信。
+
+## 细胞通讯网络圈图
+圈图（下图）可以展示配体-受体细胞通讯网络，外周不同颜色的圈代表不同的细胞类型，圈的大小表示细胞的数量，圈越大细胞数量越多，左图中间的箭头表示配体-受体对的数量，右图中间的箭头表示互作的强度值。
+```{r echo=FALSE}
+filename <- "interactions_number"
+if(length(grep(filename, files)) == 1){
+  knitr::include_graphics(paste0(dir_C, files)[grep(filename, files)])
+}
+filename <- "interactions_weights"
+if(length(grep(filename, files)) == 1){
+  knitr::include_graphics(paste0(dir_C, files)[grep(filename, files)])
+}
+```
+
+
+## 每个细胞信号图
+下图分别展示了每个细胞与其余细胞的细胞互作，圆圈的大小表示细胞数量，线的粗细表示细胞信号的数量。
+```{r echo=FALSE}
+filename <- "each_cell_interaction"
+if(length(grep(filename, files)) >= 1){
+  knitr::include_graphics(paste0(dir_C, files)[grep(filename, files)])
+}
+```
+
+## 层次图
+层次图（下图）中的实心圆和空心圆分别代表源和目标。
+```{r echo=FALSE}
+filename <- "hierarchy"
+if(length(grep(filename, files)) == 1){
+  knitr::include_graphics(paste0(dir_C, files)[grep(filename, files)])
+}
+```

@@ -1,0 +1,45 @@
+---
+title: "单细胞RNA序列（scRNA-seq）分析报告"
+author: "WQR"
+date: "2024-01-27"
+format:
+  html:
+    number_sections: true
+    toc: true
+    toc_float: 
+      collapsed: TRUE
+      smooth_scroll: FALSE
+---
+
+```{r include=FALSE}
+info <- readRDS("D:/Data/scRNA-seq/pbmc3k/pbmc3k_results/pbmc3k_info.rds")
+dir <- paste0(info$results_dir, "/plots")
+```
+
+# 概述 {.tabset .tabset-pills}
+
+在得到单细胞基因表达矩阵之后，使用Seurat软件识别与解释单细胞原始的表达矩阵中异质性的来源，该步骤主要包括细胞与基因的质量控制，降维与聚类，差异分析等。 在得到不同类的标记基因后使用Singler软件对不同的细胞类群进行细胞类型注释。 在完成与差异分析后使用ClusterProfiler软件对挑选出的基因集进行GO分析与通路分析。 使用monocle3软件根据单细胞基因表达的相似性进行拟时序分析来说明细胞类群之间的关系。 最后使用cellchat软件进行细胞通讯分析。
+
+样本`r info$data_name`的计数矩阵共包含`r info$dim[1]`个基因和`r info$dim[2]`个细胞。
+
+# 质量控制 {.tabset .tabset-pills}
+
+## 质量控制指标
+
+为了保证后续分析的可靠性和准确性，首先需要进行质量控制来剔除低质量细胞，质量控制的指标主要有测到的转录本分子总数，测到的基因总数，来源于线粒体基因的转录本所占比例。
+
+1.  转录本总数(nCount_RNA)：每个细胞转录本总数过低意味着有可能是背景污染，数量过高则可能是多细胞，通过设置阈值，剔除表达量过低或过高的细胞。设置最低阈值为100，最高阈值不限。
+
+2.  基因总数(nFeature_mt)：设置最低阈值为100，最高阈值不限。
+
+3.  线粒体基因比例(percent.mt)：线粒体基因表达比例高的细胞，往往意味着是坏死或者细胞膜破裂的细胞，因此通过设置线粒体基因的表达比例过滤掉这些低质量的细胞。该指标的阈值设置为30%，即保留线粒体基因比例不超过30%的细胞。
+
+4.  核糖体基因比例(percent.ribo)：核糖体的基因表达比例则代表着细胞rRNA污染的比例，该值较高代表着mRNA没有得到足够的富集。该指标的阈值设置为50%。
+
+小提琴图展示指标的分布情况，纵轴为质量控制指标的值，横轴为样本名称，小提琴图中较宽的部分代表观测值取值的概率较高，较窄的部分则对应于较低的概率。 在质量控制前后分别画出每个指标的小提琴图，通过对比筛选前后的小提琴图可以看出细胞筛选的结果。
+
+```{r echo=FALSE}
+dir_QC <- paste0(dir, "/1_QualityControl/")
+files <- list.files(dir_QC)
+knitr::include_graphics(paste0(dir_QC, files))
+```

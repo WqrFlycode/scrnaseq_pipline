@@ -58,7 +58,7 @@ QualityControl <- function(Data, figure_format = "png"){
     )
   )
   ggsave(
-    paste0(results_dir,"_before_qc.",figure_format),
+    paste0(results_dir,"_after_qc.",figure_format),
     plot_qc,width = 12,height = 6
   )
   # QC-index scatter-----
