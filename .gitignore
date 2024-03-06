@@ -1,4 +1,8 @@
+.gitignore
 .Rproj.user
+.Ruserdata
 .Rhistory
 .RData
-.Ruserdata
+scripts_240204
+scripts_240205
+scripts_240207

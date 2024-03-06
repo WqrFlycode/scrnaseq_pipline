@@ -1,7 +1,0 @@
-{
-    "installOptions": {
-        "installFromRepository": true,
-        "libraryPath": "E:/ProgramFiles/R-4.3.1/library",
-        "installDependencies": true
-    }
-}
