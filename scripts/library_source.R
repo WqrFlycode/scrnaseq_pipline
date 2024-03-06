@@ -1,3 +1,21 @@
+# check required packages-------------------------------------------------------
+require_packages <- c(
+  "Seurat", "harmony", "SingleR", "dplyr", "monocle3", "CellChat",
+  "ggplot2", "patchwork", "ggpubr", "ggrepel", "RColorBrewer",
+  "clusterProfiler", "ReactomePA", "pathview", "org.Hs.eg.db"
+)
+required <- c(
+  "4.3.0.1", "1.2.0", "2.2.0", "1.1.3", "1.3.4", "1.6.1",
+  "3.4.3", "1.1.3", "0.6.0", "0.9.3", "1.1.3", "4.8.3",
+  "1.44.0", "1.40.0", "3.17.0"
+)
+all_packages <- .packages(all.available = TRUE)
+local <- sapply(require_packages, function(x) {
+  if (x %in% all_packages) paste0(packageVersion(x)) else NA
+})
+data.frame(required, local)
+
+# library-----------------------------------------------------------------------
 # 分析
 suppressMessages(library(Seurat))
 # suppressMessages(library(harmony))
@@ -20,7 +38,7 @@ suppressMessages(library(ReactomePA))
 
 # library(ShinyCell)
 
-# function_dir：函数的R脚本文件路径
+# source------------------------------------------------------------------------
 function_dir <- "scripts/"
 source(paste0(function_dir,"/ReadData.R"))
 source(paste0(function_dir,"/Integration.R"))
@@ -31,3 +49,18 @@ source(paste0(function_dir,"/CellCommunication.R"))
 source(paste0(function_dir,"/analysis_scrnaseq.R"))
 source(paste0(function_dir,"/Plots.R"))
 # rm(function_dir)
+
+
+# install packages--------------------------------------------------------------
+# 安装SeuratWrappers
+# 适应于4.3版的Seurat
+# remotes::install_github('satijalab/seurat-wrappers@community-vignette')
+
+# 安装cellchat
+# devtools::install_github("jokergoo/ComplexHeatmap")
+# devtools::install_github("immunogenomics/presto")
+# devtools::install_github("jinworks/CellChat")
+
+# 安装orgdb
+# https://bioconductor.org/packages/release/BiocViews.html#___OrgDb 
+# BiocManager::install("org.Mm.eg.db")
