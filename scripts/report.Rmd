@@ -170,6 +170,7 @@ knitr::include_graphics(paste0(dir_A, files)[grep("singler_by_cluster", files)])
 上图为参考MonacoImmuneData的注释结果，下图为参考DatabaseImmuneCellExpressionData的注释结果。
 
 堆积图展示每类细胞的比例,横轴为样本，纵轴为细胞比例。
+
 ```{r echo=FALSE}
 knitr::include_graphics(paste0(dir_A, files)[grep("barplot", files)])
 ```

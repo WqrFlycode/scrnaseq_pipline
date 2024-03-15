@@ -21,11 +21,16 @@ analysis_scrnaseq <- function(Data,
   info$ref_cell_dex <- ref_cell_dex
   info$ref_markers <- ref_markers
   
-  # QC
+  # QC-----
   # qc_index <- c("nFeature_RNA", "nCount_RNA", "percent.mito", "percent.ribo")
   # compute the proportion of mito-genes expression
   if(! "percent.mito" %in% names(Data@meta.data)){
-    Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = "^MT-") 
+    if (info$Species == "mouse") {
+      pattern_mt <- "^mt-"
+    }else{
+      pattern_mt <- "^MT-"
+    }
+    Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = pattern_mt)
   }
   # compute the proportion of ribo-genes expression
   if(! "percent.ribo" %in% names(Data@meta.data)){
@@ -37,11 +42,20 @@ analysis_scrnaseq <- function(Data,
   }
   # percentage times 100
   
-  cat("\n %%%%% run quality control %%%%% \n")
+  cat("\n %%%%% run quality control %%%%% \n") # 3sigma, mad
+  # box
+  outlier_range <- function(x, n = 1.5){
+    l <- sum(fivenum(x)*c(0,1+n,0,-n,0))
+    u <- sum(fivenum(x)*c(0,-n,0,1+n,0))
+    return(c(l,u))
+  }
+  nFeature_lu <- outlier_range(Data$nFeature_RNA,n = 3) # lower & upper
+  nCount_lu <- outlier_range(Data$nCount_RNA,n = 3)
   Data <- subset(
     Data,
-    subset = nFeature_RNA > min_nFeature & 
-      nCount_RNA > min_nCount & # nCount_RNA < 1e5 &
+    subset =
+      nFeature_RNA > max(1e2, nFeature_lu[1]) & nFeature_RNA < nFeature_lu[2] &
+      nCount_RNA > max(1e2, nCount_lu[1]) & nCount_RNA < nCount_lu[2] &
       percent.mito < max_percent_mito &
       percent.ribo < max_percent_ribo &
       percent.hb < max_percent_hb,
@@ -175,7 +189,7 @@ analysis_scrnaseq <- function(Data,
   
   # save Data
   saveRDS(Data, paste0(results_path, "_results.rds"))
-  cat("\n %%%%% analysis finished %%%%% \n")
+  cat("\n %%%%% all analysis finished %%%%% \n")
   sink()
   return(Data)
 }

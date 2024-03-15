@@ -11,9 +11,9 @@ source("scripts/library_source.R")
 ## 3.文件名称应为*matrix.mtx.gz; *barcodes.tsv.gz; *
 
 Data <- ReadData_10X(
-  data_dir = "D:/Data/scRNA-seq/mouse/GSE226169_RAW/",
-  filename = "GSM7066259",
-  data_name = "GSM7066259",
+  data_dir = "D:/Data/scRNA-seq/ZLC23HXY30402/",
+  filename = "ZLC23HXY30402",
+  data_name = "ZLC23HXY30402",
   Species = "mouse", # "human"; "mouse"; "zebrafish"
   results_dir = NULL
 )
@@ -23,9 +23,9 @@ Data <- analysis_scrnaseq(
   Data,
   min_nFeature = 100, min_nCount = 100, 
   max_percent_mito = 30, max_percent_ribo = 50,
-  pc_num = 50,resolution = 0.5,
-  ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/",
-  ref_cell_dex = "ImmGenData",
+  pc_num = 50,resolution = 0.3,
+  ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
+  ref_cell_dex = "MouseRNAseqData",
   ref_markers = NULL
 )
 
@@ -57,3 +57,5 @@ makeShinyApp(
   shiny.title = "ShinyCell Quick Start",
   shiny.dir = paste0(data_dir, "shinyApp/")
 ) 
+
+Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23HXY30402/ZLC23HXY30402_results/ZLC23HXY30402_info.rds")

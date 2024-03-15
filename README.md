@@ -1,7 +1,5 @@
 # support for species
-Annotation:
-
-  "human", "rat"
+Annotation: human, rat
 
 enrich:
 
@@ -9,7 +7,7 @@ enrich:
   
   Reactome: "human", "rat", "mouse", "celegans", "yeast", "zebrafish", "fly"
 
-CellChat:
+CellChat: human, mouse, zebrafish
 
 
 <!--

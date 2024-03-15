@@ -26,15 +26,15 @@ Plot_seurat <- function(Data, figure_format = "png"){
       Data,
       features = qc_index,
       group.by = "orig.ident",
-      ncol = 3,
+      ncol = 4,
       raster = FALSE
     )
   )
   ggsave(
     paste0(results_dir,"_after_qc.",figure_format),
     plot_qc,
-    width = 2*length(unique(Data$orig.ident)),
-    height = 6*ceiling(length(qc_index)/3)
+    width = 4*5*length(unique(Data$orig.ident)),
+    height = 6 # *ceiling(length(qc_index)/3)
     # QC-index scatter
   )
   suppressWarnings(
@@ -380,7 +380,8 @@ Plot_seurat <- function(Data, figure_format = "png"){
     paste0(results_dir,"_heatmap.",figure_format),
     plot_heatmap,
     width = ncluster, height = 2*ncluster,
-    scale = 1
+    scale = 1,
+    limitsize = FALSE
   )
   rm(plot_heatmap, top10)
   
@@ -504,9 +505,11 @@ Plot_seurat <- function(Data, figure_format = "png"){
     cellchat <- Data@tools$cellchat
     group_size <- as.numeric(table(cellchat@idents))
     # 细胞通讯网络圈图
+    filename_interactions_n <- paste0(results_dir,"_interactions_number.png")
+    filename_interactions_w <- paste0(results_dir,"_interactions_weights.png")
     tryCatch({
       png(
-        filename = paste0(results_dir,"_interactions_number.png"),
+        filename = filename_interactions_n,
         width = 1080,
         height = 1080,
         units = "px",
@@ -522,9 +525,8 @@ Plot_seurat <- function(Data, figure_format = "png"){
       )
       dev.off() # close
       
-      
       png(
-        filename = paste0(results_dir,"_interactions_weights.png"),
+        filename = filename_interactions_w,
         width = 1080,
         height = 1080,
         units = "px",
@@ -539,6 +541,10 @@ Plot_seurat <- function(Data, figure_format = "png"){
       )
       dev.off() # close
     }, error = function(e){
+      dev.off()
+      if(file.exists(filename_interactions_n)) file.remove(filename_interactions_n)
+      if(file.exists(filename_interactions_w)) file.remove(filename_interactions_w)
+      rm(filename_interactions_n, filename_interactions_w)
       message("%%% netVisual_circle error %%%")
     })
     
@@ -547,9 +553,10 @@ Plot_seurat <- function(Data, figure_format = "png"){
       mat <- cellchat@net$count
       # plotdim <- c(ceiling(nrow(mat)/3),3)
       # par(mfrow = plotdim, xpd=TRUE, mar = c(1,1,1,1))
+      filename_each_cell <- paste0(results_dir,"_each_cell_interaction_",i,".png")
       for (i in 1:nrow(mat)) {
         png(
-          filename = paste0(results_dir,"_each_cell_interaction_",i,".png"),
+          filename = filename_each_cell,
           width = 540,
           height = 540,
           units = "px",
@@ -571,13 +578,17 @@ Plot_seurat <- function(Data, figure_format = "png"){
         dev.off()
       }
     }, error = function(e){
+      dev.off()
+      if(file.exists(filename_each_cell)) file.remove(filename_each_cell)
+      rm(filename_each_cell)
       message("%%% cell type circle error %%%")
     })
     
     # hierarchy figure
+    filename_hierarchy <- paste0(results_dir,"_hierarchy.png")
     tryCatch({
       png(
-        filename = paste0(results_dir,"_hierarchy.png"),
+        filename = filename_hierarchy,
         width = 1920*2,
         height = 1920*(3/4)*2,
         units = "px",
@@ -592,6 +603,8 @@ Plot_seurat <- function(Data, figure_format = "png"){
       dev.off()
     }, error = function(e){
       dev.off()
+      if(file.exists(filename_hierarchy)) file.remove(filename_hierarchy)
+      rm(filename_hierarchy)
       message("%%% hierarchy error %%%")
     })
     
