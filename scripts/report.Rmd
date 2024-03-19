@@ -2,15 +2,23 @@
 title: "单细胞RNA序列（scRNA-seq）分析报告"
 output:
   html_document:
-    toc: true
+    toc: TRUE
     toc_float: 
       collapsed: TRUE
       smooth_scroll: FALSE
-    number_sections: true
-    fig_caption: true
+    number_sections: TRUE
+    fig_caption: TRUE
 params:
   info: ""
 ---
+
+<style type="text/css">
+div.main-container {
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
 
 ```{r include=FALSE}
 # info <- readRDS("D:/Data/scRNA-seq/pbmc3k/pbmc3k_results/pbmc3k_info.rds")
@@ -39,6 +47,8 @@ dir <- paste0(info$results_dir, "/plots")
 4.  核糖体基因比例(percent.ribo)：核糖体的基因表达比例则代表着细胞rRNA污染的比例，该值较高代表着mRNA没有得到足够的富集。该指标的阈值设置为50%。
 
 小提琴图展示指标的分布情况，纵轴为质量控制指标的值，横轴为样本名称，小提琴图中较宽的部分代表观测值取值的概率较高，较窄的部分则对应于较低的概率。 在质量控制前后分别画出每个指标的小提琴图，通过对比筛选前后的小提琴图可以看出细胞筛选的结果。
+
+有些基因在所有细胞中的表达量均为0，将这些基因直接剔除。
 
 经过质量控制，
 剔除了 **`r info$raw_dim[1]-info$filter_dim[1]`** 个基因，
@@ -364,21 +374,15 @@ if(length(grep(filename, files)) == 1){
 }
 ```
 
-
-## 每个细胞信号图
-下图分别展示了每个细胞与其余细胞的细胞互作，圆圈的大小表示细胞数量，线的粗细表示细胞信号的数量。
+## 层次图
+层次图（下图）中的实心圆和空心圆分别代表源和目标。
 ```{r echo=FALSE}
-filename <- "each_cell_interaction"
+filename <- "hierarchy"
 if(length(grep(filename, files)) >= 1){
   knitr::include_graphics(paste0(dir_C, files)[grep(filename, files)])
 }
 ```
 
-## 层次图
-层次图（下图）中的实心圆和空心圆分别代表源和目标。
-```{r echo=FALSE}
-filename <- "hierarchy"
-if(length(grep(filename, files)) == 1){
-  knitr::include_graphics(paste0(dir_C, files)[grep(filename, files)])
-}
+```{r include=FALSE}
+rm(dir, dir_A, dir_C, dir_CL, dir_DE, dir_DR, dir_E, dir_QC, dir_T)
 ```

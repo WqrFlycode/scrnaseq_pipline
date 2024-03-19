@@ -1,4 +1,5 @@
 source("scripts/library_source.R")
+packages_info
 
 # read data
 ## data_dir:    单细胞数据文件路径
@@ -58,4 +59,4 @@ makeShinyApp(
   shiny.dir = paste0(data_dir, "shinyApp/")
 ) 
 
-Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23HXY30402/ZLC23HXY30402_results/ZLC23HXY30402_info.rds")
+Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23ETS30318/ZLC23ETS30318_results/ZLC23ETS30318_info.rds")

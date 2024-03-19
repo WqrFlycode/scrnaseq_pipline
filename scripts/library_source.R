@@ -13,7 +13,9 @@ all_packages <- .packages(all.available = TRUE)
 local <- sapply(require_packages, function(x) {
   if (x %in% all_packages) paste0(packageVersion(x)) else NA
 })
-data.frame(required, local)
+packages_info <- data.frame(required, local)
+rm(require_packages, required, all_packages, local)
+
 
 # library-----------------------------------------------------------------------
 # 分析

@@ -437,7 +437,11 @@ Plot_seurat <- function(Data, figure_format = "png"){
       if(!is.null(enrichment_plot[[j]])){
         enrichment_plot[[j]] <-  enrichment_plot[[j]] + 
           patchwork::plot_annotation(paste0("cluster_", i)) & 
-          theme(plot.title = element_text(hjust = 0.5))
+          theme(
+            plot.title = element_text(hjust = 0.5, size = 23),
+            text = element_text(size = 20)
+          )
+        if(j %in% 1:3) { enrich_plot_h <- 18 }else{ enrich_plot_h <- 10 }
         tryCatch({
           ggsave(
             paste0(
@@ -445,7 +449,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
               ".svg"
             ),
             enrichment_plot[[j]],
-            width = 12,height = 6,scale = 3,
+            width = 18, height = enrich_plot_h, # scale = 3,
             bg = "white"
           )
         }, error = function(e){
@@ -548,65 +552,31 @@ Plot_seurat <- function(Data, figure_format = "png"){
       message("%%% netVisual_circle error %%%")
     })
     
-    # signal from a type of cell
+    # hierarchy figure
+    filename_hierarchy <- paste0(results_dir,"_",1:5,"_hierarchy.svg")
     tryCatch({
-      mat <- cellchat@net$count
-      # plotdim <- c(ceiling(nrow(mat)/3),3)
-      # par(mfrow = plotdim, xpd=TRUE, mar = c(1,1,1,1))
-      filename_each_cell <- paste0(results_dir,"_each_cell_interaction_",i,".png")
-      for (i in 1:nrow(mat)) {
-        png(
-          filename = filename_each_cell,
-          width = 540,
-          height = 540,
-          units = "px",
-          bg = "white"
-          # res = 450
-        )
-        mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
-        mat2[i,] <- mat[i,]
-        netVisual_circle(
-          mat2,
-          vertex.weight = group_size,
-          weight.scale = TRUE,
-          label.edge = F,
-          # arrow.width = 0.2,
-          # arrow.size = 0.1,
-          edge.weight.max = max(mat),
-          title.name = rownames(mat)[i]
+      for (p in 1:5) {
+        svg(
+          filename = filename_hierarchy[p],
+          bg = "white" ,height = 7,width = 15
+          )
+        CellChat::netVisual_aggregate(
+          cellchat,
+          signaling = cellchat@netP$pathways[p],
+          vertex.receiver = 1:floor(length(info$celltypes$by_cluster)/2),
+          layout =  "hierarchy",
+          title.space = 3
         )
         dev.off()
       }
     }, error = function(e){
-      dev.off()
-      if(file.exists(filename_each_cell)) file.remove(filename_each_cell)
-      rm(filename_each_cell)
-      message("%%% cell type circle error %%%")
-    })
-    
-    # hierarchy figure
-    filename_hierarchy <- paste0(results_dir,"_hierarchy.png")
-    tryCatch({
-      png(
-        filename = filename_hierarchy,
-        width = 1920*2,
-        height = 1920*(3/4)*2,
-        units = "px",
-        bg = "white",
-        res = 450)
-      CellChat::netVisual_aggregate(
-        cellchat,
-        signaling = cellchat@netP$pathways,
-        vertex.receiver = info$celltypes$by_seurat,
-        layout = "hierarchy"
-      )
-      dev.off()
-    }, error = function(e){
-      dev.off()
-      if(file.exists(filename_hierarchy)) file.remove(filename_hierarchy)
-      rm(filename_hierarchy)
+      replicate(length(dev.list()),dev.off())
+      if(any(file.exists(filename_hierarchy))) {
+        file.remove(filename_hierarchy[file.exists(filename_hierarchy)])
+      }
       message("%%% hierarchy error %%%")
     })
+    rm(filename_hierarchy)
     
     # rm(mat, mat2, clusters, ncluster, plotdim, i, group_size)
     sink()
@@ -678,11 +648,11 @@ plot_enrichment <- function(genes, Species){
     )
     ## 条形图
     bar_plot <- barplot(
-      enrich_go, showCategory=20, title = paste0("EnrichmentGO_",go,"_bar")
+      enrich_go, showCategory = 20, title = paste0("EnrichmentGO_",go,"_bar")
     ) #条状图，按p从小到大排，绘制前20个Term
     ## 点图
     dot_plot <- dotplot(
-      enrich_go,title=paste0("EnrichmentGO_",go,"_dot")
+      enrich_go, showCategory = 20, title = paste0("EnrichmentGO_",go,"_dot")
     )#点图，按富集的数从大到小的
     if (nrow(enrich_go) > 1) {
       ## acyclic_graph

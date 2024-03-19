@@ -24,3 +24,8 @@ solve:
 The package igaph 1.4.0 is not compatible with cellchat. When I changed igraph 1.4.0 to 1.3.5, the problem was solved.
 
 -->
+
+
+# future
+1.seurat v5
+2.analyze and plot step by step
