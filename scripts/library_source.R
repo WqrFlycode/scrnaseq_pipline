@@ -26,6 +26,13 @@ suppressMessages(library(SingleR))
 suppressMessages(library(monocle3))
 # suppressMessages(library(SeuratWrappers))
 suppressMessages(library(CellChat))
+suppressMessages(library(parallel))
+# suppressMessages(library(findPC))
+# suppressMessages(library(clustree))
+# suppressMessages(library(cluster))
+# suppressMessages(library(tidyr))
+# suppressMessages(library(writexl))
+
 # 作图
 # suppressMessages(library(ggplot2))
 # suppressMessages(library(patchwork))
@@ -50,6 +57,8 @@ source(paste0(function_dir,"/TrajectoryAnalysis.R"))
 source(paste0(function_dir,"/CellCommunication.R"))
 source(paste0(function_dir,"/analysis_scrnaseq.R"))
 source(paste0(function_dir,"/Plots.R"))
+function_dir <- "Plots/"
+source(paste0(function_dir,"plot_enrich.R"))
 # rm(function_dir)
 
 

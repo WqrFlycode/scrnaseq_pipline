@@ -67,6 +67,26 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL,
   return(data)
 }
 
+saveinfo <- function(seuratobject, data_dir, data_name, Species = NULL, results_dir = NULL){
+  if (is.null(results_dir)) {
+    results_dir <- paste0(data_dir,"/",data_name,"_results/")
+  }
+  # create result direction
+  if (!dir.exists(results_dir)) {
+    dir.create(results_dir)
+  }
+
+  info <- list()
+  info$data_name <- data_name
+  info$data_dir <- data_dir
+  info$results_dir <- results_dir
+  info$Species <- Species
+  seuratobject@tools$info <- info
+
+  saveRDS(seuratobject, paste0(results_dir,data_name,"_raw_seurat.rds"))
+  cat("\n----------add data ", data_name, "info----------")
+  return(seuratobject)
+}
 
 ReadData_csv <- function(data_dir, data_name = "case", results_dir = NULL){
   if (is.null(results_dir)) {

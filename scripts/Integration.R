@@ -3,7 +3,7 @@ merge_data <- function(seurat_objects_path, results_dir, data_name) {
     seurat_objects_path,
     function(x){
       data <- readRDS(x)
-      data$orig.ident <- data@tools$data_name
+      data$orig.ident <- data@tools$info$data_name
       return(data)
     }
   )

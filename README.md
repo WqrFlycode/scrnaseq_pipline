@@ -29,3 +29,5 @@ The package igaph 1.4.0 is not compatible with cellchat. When I changed igraph 1
 # future
 1.seurat v5
 2.analyze and plot step by step
+3.使用相对路径，便于移动目录
+4.save meta data

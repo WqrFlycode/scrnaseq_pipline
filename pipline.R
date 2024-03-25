@@ -1,5 +1,4 @@
 source("scripts/library_source.R")
-packages_info
 
 # read data
 ## data_dir:    单细胞数据文件路径
@@ -12,25 +11,39 @@ packages_info
 ## 3.文件名称应为*matrix.mtx.gz; *barcodes.tsv.gz; *
 
 Data <- ReadData_10X(
-  data_dir = "D:/Data/scRNA-seq/ZLC23HXY30402/",
-  filename = "ZLC23HXY30402",
-  data_name = "ZLC23HXY30402",
-  Species = "mouse", # "human"; "mouse"; "zebrafish"
+  data_dir = "D:/Data/scRNA-seq/case/",
+  filename = "case",
+  data_name = "case",
+  Species = "human", # "human"; "mouse"; "zebrafish"
   results_dir = NULL
 )
+
+min_nFeature = 100
+min_nCount = 100
+max_percent_mito = 30
+max_percent_ribo = 50
+max_percent_hb = 30
+pc_num = 50
+resolution = 0.3
+# ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/"
+ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/"
+ref_cell_dex = "HumanPrimaryCellAtlasData"
+ref_markers = NULL
 
 # analysis
 Data <- analysis_scrnaseq(
   Data,
   min_nFeature = 100, min_nCount = 100, 
-  max_percent_mito = 30, max_percent_ribo = 50,
+  max_percent_mito = 30, max_percent_ribo = 50,max_percent_hb = 30,
   pc_num = 50,resolution = 0.3,
-  ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
-  ref_cell_dex = "MouseRNAseqData",
-  ref_markers = NULL
+  # ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
+  ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/",
+  ref_cell_dex = "MonacoImmuneData",
+  ref_markers = NULL,
+  ncl = 1
 )
 
-Plot_seurat(Data = Data, figure_format = "png")
+Plot_seurat(Data = Data)
 
 info <- Data@tools$info
 rmarkdown::render(
@@ -59,4 +72,4 @@ makeShinyApp(
   shiny.dir = paste0(data_dir, "shinyApp/")
 ) 
 
-Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23ETS30318/ZLC23ETS30318_results/ZLC23ETS30318_info.rds")
+Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23HXY30402/ZLC23HXY30402_results/ZLC23HXY30402_info.rds")

@@ -1,5 +1,4 @@
-Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL, 
-                       figure_format = "png"){
+Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL){
   metadata_name <- NULL
   if (!is.null(ref_singler_dir)) {
     ref <- ref_cell_dex
@@ -14,15 +13,19 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
     # cell annotation------
     cat("\n %%%%% run SingleR by cell %%%%% \n")
     cell_annotation <- SingleR(
-      test = Data@assays$RNA@data, ref = ref_celldex,
+      test = Data@assays$RNA@data,
+      ref = ref_celldex,
       assay.type.test = 1, labels = ref_celldex$label.fine
     )
-    Data <- AddMetaData(Data,metadata = cell_annotation$labels,col.name = metadata_name[1])
+    Data <- AddMetaData(
+      Data,metadata = cell_annotation$labels,col.name = metadata_name[1]
+    )
     
     # run cluster annotation------
     cat("\n %%%%% run SingleR by cluster %%%%% \n")
     cluster_annotation <- SingleR(
-      test = Data@assays$RNA@data, ref = ref_celldex, 
+      test = Data@assays$RNA@data,
+      ref = ref_celldex,
       clusters = Data$seurat_clusters, # 按类群注释
       assay.type.test = 1, labels = ref_celldex$label.fine
     )

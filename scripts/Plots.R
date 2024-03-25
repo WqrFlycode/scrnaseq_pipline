@@ -1,19 +1,20 @@
-Plot_seurat <- function(Data, figure_format = "png"){
+Plot_seurat <- function(Data){
   info <- Data@tools$info
   Results_dir <- info$results_dir
   Data_name <- info$data_name
-  if(!dir.exists(paste0(Results_dir, "/plots/"))) {
-    dir.create(paste0(Results_dir, "/plots/"))
+  plots_dir <- paste0(Results_dir, "/plots/")
+  if(!dir.exists(plots_dir)) {
+    dir.create(plots_dir)
   }
   sink(
-    file = paste0(Results_dir, "/plots/", Data_name, "_plots_log.txt"),
+    file = paste0(plots_dir, Data_name, "_plots_log.txt"),
     append = FALSE,
     split = TRUE
   )
   
-  # QC-----
+  # QC--------------------------------------------------------------------------
   cat("\n %%%%% plot QC %%%%% \n")
-  results_dir <- paste0(Results_dir, "/plots/1_QualityControl/", Data_name)
+  results_dir <- paste0(plots_dir, "1_QualityControl/", Data_name)
   qc_index <- c(
     "nFeature_RNA", "nCount_RNA", "percent.mito", 
     "percent.ribo", "percent.redcell"
@@ -31,7 +32,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
     )
   )
   ggsave(
-    paste0(results_dir,"_after_qc.",figure_format),
+    paste0(results_dir,"_after_qc.png"),
     plot_qc,
     width = 4*5*length(unique(Data$orig.ident)),
     height = 6 # *ceiling(length(qc_index)/3)
@@ -52,17 +53,13 @@ Plot_seurat <- function(Data, figure_format = "png"){
         group.by = "orig.ident"
       )+NoLegend()
   )
-  ggsave(paste0(results_dir,"_qc_index_scatter.",figure_format),
+  ggsave(paste0(results_dir,"_qc_index_scatter.png"),
          plot_FeatureScatter,width = 12,height = 6)
   rm(plot_FeatureScatter, plot_qc, qc_index)
   
-  # DimReduction-----
+  # DimReduction----------------------------------------------------------------
   cat("\n %%%%% plot DR %%%%% \n")
-  results_dir <- paste0(
-    Results_dir,
-    "/plots/2_DimensionalityReduction/",
-    Data_name
-  )
+  results_dir <- paste0(plots_dir, "2_DimensionalityReduction/", Data_name)
   # Demonstration of highly variable genes
   cat("\n %%%%% plot DR HVG %%%%% \n")
   top10 <- head(VariableFeatures(Data), 10)
@@ -71,7 +68,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
     plot = plot_hvg, points = top10, repel = TRUE,xnudge = 0,ynudge = 0
   )
   suppressWarnings(ggsave(
-    paste0(results_dir,"_hvg.",figure_format),
+    paste0(results_dir,"_hvg.png"),
     plot_hvg, width = 5, height = 5, bg = "white"
   ))
   cat("\n %%%%% plot DR elbow %%%%% \n")
@@ -83,28 +80,25 @@ Plot_seurat <- function(Data, figure_format = "png"){
   )
   cat("\n %%%%% plot DR dimloading %%%%% \n")
   plot_dimloading <- VizDimLoadings(Data, dims = 1:16, reduction = "pca")
-  ggsave(paste0(results_dir,"_dimloading.",figure_format),plot_dimloading,width = 20,height = 20)
+  ggsave(
+    paste0(results_dir,"_dimloading.png"),
+    plot_dimloading,
+    width = 20,height = 20
+  )
   cat("\n %%%%% plot DR pc1-pc2 %%%%% \n")
   plot_pca <- DimPlot(
     Data, reduction = "pca",group.by = "orig.ident",raster = FALSE
   )+NoLegend()
-  ggsave(paste0(results_dir,"_pca.",figure_format),plot_pca,width = 6,height = 5)
-  ## 热图-----
-  # cat("\n %%%%% plot DR heatmap %%%%% \n")
-  # png( 
-  #   filename = paste0(results_dir,"_dimheatmap.",figure_format),
-  #   width = 1920,
-  #   height = 1080,
-  #   units = "px",
-  #   bg = "white",
-  #   res = 100)
-  # DimHeatmap(Data, dims = 1:9, cells = 500)
-  # dev.off()
+  ggsave(
+    paste0(results_dir,"_pca.png"),
+    plot_pca,
+    width = 6,height = 5
+  )
   rm(plot_dimloading, plot_elbow, plot_hvg, plot_pca, top10)
   
-  # Clustering-----
+  # Clustering------------------------------------------------------------------
   cat("\n %%%%% plot Clustering %%%%% \n")
-  results_dir <- paste0(Results_dir,"/plots/3_Clustering/")
+  results_dir <- paste0(plots_dir, "3_Clustering/")
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir, Data_name)
   
@@ -114,13 +108,13 @@ Plot_seurat <- function(Data, figure_format = "png"){
     plot_umap <- DimPlot(Data, reduction = "umap")
     # plot_cluster <- plot_umap+plot_layout(guides = "collect")
     ggsave(
-      paste0(results_dir,"_cluster_umap.",figure_format),
+      paste0(results_dir,"_cluster_umap.png"),
       plot_umap,
       width = 3,height = 3,scale = 3
     )
     plot_tsne <- DimPlot(Data, reduction = "tsne")
     ggsave(
-      paste0(results_dir,"_cluster_tsne.",figure_format),
+      paste0(results_dir,"_cluster_tsne.png"),
       plot_tsne,
       width = 3,height = 3,scale = 3
     )
@@ -133,20 +127,20 @@ Plot_seurat <- function(Data, figure_format = "png"){
       raster = FALSE
     )
     ggsave(
-      paste0(results_dir,"_after_correct_batch_effect.",figure_format),
+      paste0(results_dir,"_after_correct_batch_effect.png"),
       plot = plot_samples, 
       width = 6, height = 6, scale = 3
     )
     plot_umap <- DimPlot(Data, reduction = "umap", raster = FALSE)
     # plot_cluster <- plot_umap+plot_layout(guides = "collect")
     ggsave(
-      paste0(results_dir,"_cluster_umap.",figure_format),
+      paste0(results_dir,"_cluster_umap.png"),
       plot_umap,
       width = 3,height = 3,scale = 3
     )
     plot_tsne <- DimPlot(Data, reduction = "tsne",raster = FALSE)
     ggsave(
-      paste0(results_dir,"_cluster_tsne.",figure_format),
+      paste0(results_dir,"_cluster_tsne.png"),
       plot_tsne,
       width = 3,height = 3,scale = 3
     )
@@ -154,8 +148,8 @@ Plot_seurat <- function(Data, figure_format = "png"){
   }
   rm(plot_umap,plot_tsne)
   
-  # Annotation-----
-  results_dir <- paste0(Results_dir,"/plots/4_Annotation/")
+  # Annotation------------------------------------------------------------------
+  results_dir <- paste0(plots_dir,"4_Annotation/")
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir,Data_name)
   # 合并一级细胞类型相同的细胞
@@ -175,7 +169,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
       theme(legend.position = "bottom",legend.text = element_text(size = 8))+ 
       guides(color = guide_legend(ncol = 3, override.aes = list(size = 4)))
     ggsave(
-      paste0(results_dir,"_", "singler_by_cell", ".png"),
+      paste0(results_dir,"_", "singler_by_cell.png"),
       plot_umap_all, 
       width = 10, height = 10+length(unique(Data$singler_by_cell))/(3*5)
     )
@@ -188,7 +182,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
         theme(legend.position = "bottom") + 
         guides(color = guide_legend(ncol = 3, override.aes = list(size = 5)))
       ggsave(
-        paste0(results_dir,"_", "singler_by_cell", "_samples.",figure_format),
+        paste0(results_dir,"_", "singler_by_cell", "_samples.png"),
         plot_umap,
         width = 9*3, height = 9*ceiling(length(unique(Data$orig.ident))/3)+9,
         limitsize = FALSE
@@ -209,7 +203,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
       theme(legend.position = "bottom",legend.text = element_text(size = 10)) + 
       guides(color = guide_legend(ncol = 3, override.aes = list(size = 4)))
     ggsave(
-      paste0(results_dir,"_", "singler_by_cluster", ".png"),
+      paste0(results_dir,"_", "singler_by_cluster.png"),
       plot_umap_all, 
       width = 10, height = 10+length(unique(Data$singler_by_cluster))/(3*5),
       limitsize = FALSE
@@ -226,7 +220,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
       #                      label = T , repel = T, label.size = 5)
       # plot_cluster <- plot_umap+plot_tsne+plot_layout(guides = "collect")
       ggsave(
-        paste0(results_dir,"_", "singler_by_cluster","_samples.",figure_format),
+        paste0(results_dir,"_", "singler_by_cluster","_samples.png"),
         plot_umap,
         width = 10*2, height = 9*ceiling(length(unique(Data$orig.ident))/2) + 2, 
         limitsize = FALSE
@@ -280,7 +274,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
   
   # Markers---------------------------------------------------------------------
   cat("\n %%%%% plot differential expressing genes %%%%% \n")
-  results_dir <- paste0(Results_dir,"/plots/5_DifferentialExpressing/")
+  results_dir <- paste0(plots_dir, "5_DifferentialExpressing/")
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir,Data_name)
   Data.all.markers <- Data@tools$all.markers$by.cluster
@@ -328,19 +322,13 @@ Plot_seurat <- function(Data, figure_format = "png"){
     #          patchwork::plot_annotation(title = paste0("cluster_",i))
     # )
     ggsave(
-      paste0(results_dir,"_deg_violin_cluster_", i,".",figure_format),
+      paste0(results_dir,"_deg_violin_cluster_", i,".png"),
       VlnPlot(
         Data, features = genes, slot = "counts", log = TRUE, raster = FALSE
       ),
       width = ncluster,height = 3
     )
   }
-  # plot_de_violin <- eval(parse(
-  #   text = paste("plot_de_violin_",1:ncluster,sep = "",collapse = "/")
-  # ))
-  # ggsave(paste0(results_dir,"_differential_expression_genes.",figure_format),
-  #        plot_de_violin,width = 9,height = 3*ncluster)
-  # rm(plot_de_violin, genes, list = paste("plot_de_violin_",1:ncluster,sep = ""))
   
   ## umap图-----
   for (i in 1:ncluster) {
@@ -362,7 +350,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
     1:ncluster,sep = "",collapse = "/"
   )))
   ggsave(
-    paste0(results_dir,"_de_genes_umap.",figure_format),
+    paste0(results_dir,"_de_genes_umap.png"),
     plot_de_umap,width = 12,height = 3*ncluster,limitsize = FALSE
   )
   rm(
@@ -377,7 +365,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
   plot_heatmap <- DoHeatmap(Data, features = top10$gene, raster = FALSE) + 
     NoLegend()
   ggsave(
-    paste0(results_dir,"_heatmap.",figure_format),
+    paste0(results_dir,"_heatmap.png"),
     plot_heatmap,
     width = ncluster, height = 2*ncluster,
     scale = 1,
@@ -387,7 +375,6 @@ Plot_seurat <- function(Data, figure_format = "png"){
   
   ## 火山图-----
   # volcano figure
-  names(Data.all.markers)[7] <- "genes"
   clusters <- unique(Data.all.markers$cluster)
   ncluster <- length(unique(Data.all.markers$cluster))
   cluster_markers_list <- list()
@@ -395,7 +382,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
     cluster_markers_list[[i]] <- subset(
       Data.all.markers,
       cluster == clusters[i],
-      select = c(avg_log2FC,p_val_adj,genes)
+      select = c(avg_log2FC,p_val_adj,gene)
     )
     names(cluster_markers_list)[i] <- paste0("cluster_",i)
   }
@@ -410,7 +397,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
   }
   for (i in 1:length(volcano_list)) {
     ggsave(
-      paste0(results_dir,"_volcano_cluster",i,".",figure_format),
+      paste0(results_dir,"_volcano_cluster",i,".png"),
       volcano_list[[i]], 
       width = 6, height = 6, scale = 1, 
       bg = "white"
@@ -420,50 +407,16 @@ Plot_seurat <- function(Data, figure_format = "png"){
   
   # Enrich----------------------------------------------------------------------
   cat("\n %%%%% plot Enrichment %%%%% \n")
-  results_dir <- paste0(Results_dir, "/plots/6_Enrich/")
+  results_dir <- paste0(plots_dir, "6_Enrich/")
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir, Data_name)
-  for (i in 1:ncluster) {
-    enrichment_plot <- plot_enrichment(
-      genes = filter(
-        cluster_markers_list[[i]],
-        p_val_adj < 0.05,
-        avg_log2FC > 1 | avg_log2FC < -1
-      )$genes,
-      Species = info$Species
-    )
-    for (j in 1:5) {
-      db <- names(enrichment_plot)
-      if(!is.null(enrichment_plot[[j]])){
-        enrichment_plot[[j]] <-  enrichment_plot[[j]] + 
-          patchwork::plot_annotation(paste0("cluster_", i)) & 
-          theme(
-            plot.title = element_text(hjust = 0.5, size = 23),
-            text = element_text(size = 20)
-          )
-        if(j %in% 1:3) { enrich_plot_h <- 18 }else{ enrich_plot_h <- 10 }
-        tryCatch({
-          ggsave(
-            paste0(
-              results_dir, "_", names(cluster_markers_list)[i], "_", db[j], 
-              ".svg"
-            ),
-            enrichment_plot[[j]],
-            width = 18, height = enrich_plot_h, # scale = 3,
-            bg = "white"
-          )
-        }, error = function(e){
-          message("%%% failed to plot ", db[j], " %%%")
-        })
-      }
-    }
-  }
-  rm(Orgdb, db, enrichment_plot, Data.all.markers, cluster_markers_list)
+  enrichment_dir <- paste0(Results_dir, info$data_name, "_enrichment.rds")
+  enrich_plot <- plot_enrich(enrichment_dir, results_dir)
   
   # Trajectory------------------------------------------------------------------
   if("cds" %in% names(Data@tools)){
     cat("\n %%%%% Trajectory %%%%% \n")
-    results_dir <- paste0(Results_dir,"/plots/7_Trajectory/")
+    results_dir <- paste0(plots_dir, "7_Trajectory/")
     if(!dir.exists(results_dir)) dir.create(results_dir)
     results_dir <- paste0(results_dir,Data_name)
     cds <- Data@tools$cds
@@ -478,7 +431,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
       group_label_size = 4
     )
     ggsave(
-      paste0(results_dir,"_trojectory_cluster.",figure_format),
+      paste0(results_dir,"_trojectory_cluster.png"),
       plot_trojectory_cluster,
       width = 8, height = 5
     )
@@ -493,7 +446,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
       group_label_size = 4
     )
     ggsave(
-      paste0(results_dir,"_trojectory_pseudotime.",figure_format),
+      paste0(results_dir,"_trojectory_pseudotime.png"),
       plot_trojectory_pseudotime,
       width = 8, height = 5
     )
@@ -503,7 +456,7 @@ Plot_seurat <- function(Data, figure_format = "png"){
   # CellCommunication-----------------------------------------------------------
   if("cellchat" %in% names(Data@tools)){
     cat("\n %%%%% plot CellCommunication %%%%% \n")
-    results_dir <- paste0(Results_dir,"/plots/8_CellCommunication/")
+    results_dir <- paste0(plots_dir, "8_CellCommunication/")
     if(!dir.exists(results_dir)) dir.create(results_dir)
     results_dir <- paste0(results_dir,Data_name)
     cellchat <- Data@tools$cellchat
@@ -592,8 +545,8 @@ Plot_seurat <- function(Data, figure_format = "png"){
 
 # data: data$p_val_adj  data$avg_log2FC data$genes
 plot_volcano <- function(data, FC = 1, PValue = 0.05, volcano_title) {
-  if (!all(c("p_val_adj", "avg_log2FC", "genes") %in% names(data)))
-    stop("colnames must contain p_val_adj, avg_log2FC, genes ")
+  if (!all(c("p_val_adj", "avg_log2FC", "gene") %in% names(data)))
+    stop("colnames must contain p_val_adj, avg_log2FC, gene")
   
   # 判断每个基因的上下调
   data$sig[ (-1*log10(data$p_val_adj) < -1*log10(PValue)|data$p_val_adj=="NA")|(data$avg_log2FC < FC)& data$avg_log2FC > -FC] <- "NotSig"
@@ -610,7 +563,7 @@ plot_volcano <- function(data, FC = 1, PValue = 0.05, volcano_title) {
     # 基因标签
     ggrepel::geom_text_repel(
       data = data[order(data$p_val_adj, decreasing = FALSE)[1:10], ],
-      aes(label = genes),
+      aes(label = gene),
       size = 3
     ) +
     ggtitle(volcano_title)
@@ -646,14 +599,14 @@ plot_enrichment <- function(genes, Species){
       ont = go,
       readable = TRUE
     )
-    ## 条形图
+    ## 条形图，按p从小到大排，绘制前20个Term
     bar_plot <- barplot(
       enrich_go, showCategory = 20, title = paste0("EnrichmentGO_",go,"_bar")
-    ) #条状图，按p从小到大排，绘制前20个Term
-    ## 点图
+    )
+    ## 点图，按富集的数从大到小的
     dot_plot <- dotplot(
       enrich_go, showCategory = 20, title = paste0("EnrichmentGO_",go,"_dot")
-    )#点图，按富集的数从大到小的
+    )
     if (nrow(enrich_go) > 1) {
       ## acyclic_graph
       acyclic_plot <- goplot(enrich_go)
