@@ -18,6 +18,8 @@ Data <- ReadData_10X(
   results_dir = NULL
 )
 
+Data <- readRDS("D:/Data/scRNA-seq/case/case_results/case_raw_seurat.rds")
+results_dir = NULL
 min_nFeature = 100
 min_nCount = 100
 max_percent_mito = 30
@@ -69,7 +71,7 @@ makeShinyApp(
   scConf, 
   gene.mapping = TRUE,
   shiny.title = "ShinyCell Quick Start",
-  shiny.dir = paste0(data_dir, "shinyApp/")
+  shiny.dir = paste0("D:/Data/scRNA-seq/chicken_9_GSE146809/", "shinyApp/")
 ) 
 
 Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23HXY30402/ZLC23HXY30402_results/ZLC23HXY30402_info.rds")

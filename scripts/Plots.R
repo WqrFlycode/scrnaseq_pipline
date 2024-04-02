@@ -34,7 +34,7 @@ Plot_seurat <- function(Data){
   ggsave(
     paste0(results_dir,"_after_qc.png"),
     plot_qc,
-    width = 4*5*length(unique(Data$orig.ident)),
+    width = 4*length(unique(Data$orig.ident)),
     height = 6 # *ceiling(length(qc_index)/3)
     # QC-index scatter
   )
@@ -102,6 +102,12 @@ Plot_seurat <- function(Data){
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir, Data_name)
   
+  ggsave(
+    paste0(results_dir,"_clustree.svg"),
+    Data@tools$clustree,
+    width = 10,height = 10
+  )
+  
   # 判断是否进行批次效应
   if (length(unique(Data$orig.ident)) == 1) {
     # plot umap
@@ -129,7 +135,7 @@ Plot_seurat <- function(Data){
     ggsave(
       paste0(results_dir,"_after_correct_batch_effect.png"),
       plot = plot_samples, 
-      width = 6, height = 6, scale = 3
+      width = 3, height = 3, scale = 3
     )
     plot_umap <- DimPlot(Data, reduction = "umap", raster = FALSE)
     # plot_cluster <- plot_umap+plot_layout(guides = "collect")
@@ -294,6 +300,10 @@ Plot_seurat <- function(Data){
     paste0(results_dir,"_DEG_dots_cluster.svg"),
     plot_de_dot,width = 9,height = 9
   )
+  Data.all.markers <- Data@tools$all.markers$by.celltype
+  Data.all.markers %>%
+    group_by(cluster) %>%
+    slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
   plot_de_dot <- DotPlot(
     object = Data,
     features = unique(cluster_max$gene),
@@ -406,12 +416,14 @@ Plot_seurat <- function(Data){
   rm(volcano_list, clusters)
   
   # Enrich----------------------------------------------------------------------
-  cat("\n %%%%% plot Enrichment %%%%% \n")
-  results_dir <- paste0(plots_dir, "6_Enrich/")
-  if(!dir.exists(results_dir)) dir.create(results_dir)
-  results_dir <- paste0(results_dir, Data_name)
   enrichment_dir <- paste0(Results_dir, info$data_name, "_enrichment.rds")
-  enrich_plot <- plot_enrich(enrichment_dir, results_dir)
+  if(file.exists(enrichment_dir)){
+    cat("\n %%%%% plot Enrichment %%%%% \n")
+    results_dir <- paste0(plots_dir, "6_Enrich/")
+    if(!dir.exists(results_dir)) dir.create(results_dir)
+    results_dir <- paste0(results_dir, Data_name)
+    enrich_plot <- plot_enrich(enrichment_dir, results_dir)
+  }
   
   # Trajectory------------------------------------------------------------------
   if("cds" %in% names(Data@tools)){

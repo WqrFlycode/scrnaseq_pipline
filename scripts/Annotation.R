@@ -15,7 +15,8 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
     cell_annotation <- SingleR(
       test = Data@assays$RNA@data,
       ref = ref_celldex,
-      assay.type.test = 1, labels = ref_celldex$label.fine
+      assay.type.test = 1, 
+      labels = ref_celldex$label.fine
     )
     Data <- AddMetaData(
       Data,metadata = cell_annotation$labels,col.name = metadata_name[1]
@@ -27,7 +28,8 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
       test = Data@assays$RNA@data,
       ref = ref_celldex,
       clusters = Data$seurat_clusters, # 按类群注释
-      assay.type.test = 1, labels = ref_celldex$label.fine
+      assay.type.test = 1, 
+      labels = ref_celldex$label.main
     )
     clusters <- Data$seurat_clusters
     levels(clusters) <- cluster_annotation$labels

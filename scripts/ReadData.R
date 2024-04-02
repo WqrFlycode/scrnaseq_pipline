@@ -1,12 +1,4 @@
-ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL, results_dir = NULL){
-  if (is.null(results_dir)) {
-    results_dir <- paste0(data_dir,"/",data_name,"_results/")
-  }
-  # create result direction
-  if (!dir.exists(results_dir)) {
-    dir.create(results_dir)
-  }
-  
+ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL){
   files <- list.files(data_dir)
   exist_files <- files[grep(filename, files)]
   exist_data_names <- rep(NA, 3)
@@ -57,13 +49,12 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL,
     info <- list()
     info$data_name <- data_name
     info$data_dir <- data_dir
-    info$results_dir <- results_dir
     info$Species <- Species
     data@tools$info <- info
   } 
-  saveRDS(data, paste0(results_dir,data_name,"_raw_seurat.rds"))
+  saveRDS(data, paste0(data_dir,data_name,"_raw_seurat.rds"))
   
-  cat("\n----------Read data ", filename, "finished----------")
+  cat("\n----------Read data ", filename, "finished----------\n")
   return(data)
 }
 
@@ -118,7 +109,7 @@ ReadData_csv <- function(data_dir, data_name = "case", results_dir = NULL){
   # save rds
   saveRDS(data,file = paste0(results_dir,"/",data_name,".rds"))
   
-  print("----------Read data finished----------")
+  print("----------Read data finished----------\n")
   return(data)
 }
 
