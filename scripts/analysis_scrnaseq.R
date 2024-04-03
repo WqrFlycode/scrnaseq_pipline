@@ -140,6 +140,21 @@ analysis_scrnaseq <- function(
   )
   saveRDS(clustree_plt, paste0(results_path,"_clustree.rds"))
   
+  stability <- sapply(
+    X = 1:13,
+    FUN = function(i) {
+      clustree_plt$data %>% 
+        filter(RNA_snn_res. == seq_res[i]) %>% 
+        select(sc3_stability) %>% 
+        sum
+    }
+  )
+  res <- paste0("RNA_snn_res.", seq_res[which.max(stability)])
+  Data <- AddMetaData(
+    Data,
+    metadata = Data@meta.data[,res],
+    col.name = "seurat_clusters"
+  )
   
   # run annotation--------------------------------------------------------------
   tryCatch({

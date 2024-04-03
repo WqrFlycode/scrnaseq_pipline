@@ -292,10 +292,10 @@ Plot_seurat <- function(Data){
     
     all.markers <- readRDS(allmarkers_path)
     Data.all.markers <- all.markers$by.cluster
-    ## 气泡图-----
     Data.all.markers %>%
       group_by(cluster) %>%
       slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
+    ## 气泡图-----
     plot_de_dot <- DotPlot(
       object = Data,
       features = unique(cluster_max$gene)
@@ -344,7 +344,7 @@ Plot_seurat <- function(Data){
         VlnPlot(
           Data, features = genes, slot = "counts", log = TRUE, raster = FALSE
         ),
-        width = ncluster,height = 3
+        width = ncluster*2,height = 5
       )
     }
     

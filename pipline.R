@@ -1,3 +1,4 @@
+rm(list = ls())
 source("scripts/library_source.R")
 
 # read data
