@@ -102,11 +102,15 @@ Plot_seurat <- function(Data){
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir, Data_name)
   
-  ggsave(
-    paste0(results_dir,"_clustree.svg"),
-    Data@tools$clustree,
-    width = 10,height = 10
-  )
+  clustree_plt_path <- paste0(Results_dir, Data_name, "_clustree.rds")
+  if(file.exists(clustree_plt_path)) {
+    clustree_plt <- readRDS(clustree_plt_path)
+    ggsave(
+      paste0(results_dir,"_clustree.svg"),
+      clustree_plt,
+      width = 10,height = 10
+    )
+  }
   
   # 判断是否进行批次效应
   if (length(unique(Data$orig.ident)) == 1) {
@@ -279,159 +283,169 @@ Plot_seurat <- function(Data){
   rm(data, n_celltypes, plot_bar)
   
   # Markers---------------------------------------------------------------------
-  cat("\n %%%%% plot differential expressing genes %%%%% \n")
-  results_dir <- paste0(plots_dir, "5_DifferentialExpressing/")
-  if(!dir.exists(results_dir)) dir.create(results_dir)
-  results_dir <- paste0(results_dir,Data_name)
-  Data.all.markers <- Data@tools$all.markers$by.cluster
-  ## 气泡图-----
-  Data.all.markers %>%
-    group_by(cluster) %>%
-    slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
-  plot_de_dot <- DotPlot(
-    object = Data,
-    features = unique(cluster_max$gene)
-  ) + coord_flip() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
-      plot.background = element_rect(fill = "white")
-    )
-  ggsave(
-    paste0(results_dir,"_DEG_dots_cluster.svg"),
-    plot_de_dot,width = 9,height = 9
-  )
-  Data.all.markers <- Data@tools$all.markers$by.celltype
-  Data.all.markers %>%
-    group_by(cluster) %>%
-    slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
-  plot_de_dot <- DotPlot(
-    object = Data,
-    features = unique(cluster_max$gene),
-    group.by = "singler_by_cluster"
-  )+coord_flip()+
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
-      plot.background = element_rect(fill = "white")
-    )
-  ggsave(
-    paste0(results_dir,"_DEG_dots_celltype.svg"),
-    plot_de_dot,width = 9,height = 9
-  )
-  rm(plot_de_dot)
-  
-  ## 小提琴图-----
-  # Data.all.markers %>%
-  #   group_by(cluster) %>%
-  #   slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
-  clusters <- unique(cluster_max$cluster)
-  ncluster <- length(clusters)
-  for (i in 1:ncluster) {
-    genes <- cluster_max$gene[cluster_max$cluster == clusters[i]]
-    # assign(paste0("plot_de_violin_",i),
-    #        VlnPlot(Data, features = genes, slot = "counts", log = TRUE)+
-    #          patchwork::plot_annotation(title = paste0("cluster_",i))
-    # )
-    ggsave(
-      paste0(results_dir,"_deg_violin_cluster_", i,".png"),
-      VlnPlot(
-        Data, features = genes, slot = "counts", log = TRUE, raster = FALSE
-      ),
-      width = ncluster,height = 3
-    )
-  }
-  
-  ## umap图-----
-  for (i in 1:ncluster) {
-    genes <- cluster_max$gene[cluster_max$cluster == clusters[i]]
-    assign(
-      paste0("plot_de_umap_",i),
-      FeaturePlot(
-        Data,
-        features = genes,
-        reduction = "umap",
-        ncol = 3, 
-        raster = FALSE
+  allmarkers_path <- paste0(Results_dir, Data_name, "_all.markers.rds")
+  if(file.exists(allmarkers_path)) {
+    cat("\n %%%%% plot differential expressing genes %%%%% \n")
+    results_dir <- paste0(plots_dir, "5_DifferentialExpressing/")
+    if(!dir.exists(results_dir)) dir.create(results_dir)
+    results_dir <- paste0(results_dir,Data_name)
+    
+    all.markers <- readRDS(allmarkers_path)
+    Data.all.markers <- all.markers$by.cluster
+    ## 气泡图-----
+    Data.all.markers %>%
+      group_by(cluster) %>%
+      slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
+    plot_de_dot <- DotPlot(
+      object = Data,
+      features = unique(cluster_max$gene)
+    ) + coord_flip() +
+      theme(
+        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
+        plot.background = element_rect(fill = "white")
       )
-      
-    )
-  }
-  plot_de_umap <- eval(parse(text = paste(
-    "plot_de_umap_",
-    1:ncluster,sep = "",collapse = "/"
-  )))
-  ggsave(
-    paste0(results_dir,"_de_genes_umap.png"),
-    plot_de_umap,width = 12,height = 3*ncluster,limitsize = FALSE
-  )
-  rm(
-    i, plot_de_umap, genes, cluster_max,
-    list = paste("plot_de_umap_",1:ncluster,sep = "")
-  )
-  
-  ## 热图-----
-  Data.all.markers %>%
-    group_by(cluster) %>%
-    top_n(n = 10, wt = avg_log2FC) -> top10
-  plot_heatmap <- DoHeatmap(Data, features = top10$gene, raster = FALSE) + 
-    NoLegend()
-  ggsave(
-    paste0(results_dir,"_heatmap.png"),
-    plot_heatmap,
-    width = ncluster, height = 2*ncluster,
-    scale = 1,
-    limitsize = FALSE
-  )
-  rm(plot_heatmap, top10)
-  
-  ## 火山图-----
-  # volcano figure
-  clusters <- unique(Data.all.markers$cluster)
-  ncluster <- length(unique(Data.all.markers$cluster))
-  cluster_markers_list <- list()
-  for (i in 1:ncluster) {
-    cluster_markers_list[[i]] <- subset(
-      Data.all.markers,
-      cluster == clusters[i],
-      select = c(avg_log2FC,p_val_adj,gene)
-    )
-    names(cluster_markers_list)[i] <- paste0("cluster_",i)
-  }
-  volcano_list <- list()
-  for (i in 1:length(cluster_markers_list)) {
-    volcano_list[[i]] <- plot_volcano(
-      data = cluster_markers_list[[i]], 
-      FC = 1, 
-      PValue = 0.05,
-      volcano_title = names(cluster_markers_list)[i]
-    )
-  }
-  for (i in 1:length(volcano_list)) {
     ggsave(
-      paste0(results_dir,"_volcano_cluster",i,".png"),
-      volcano_list[[i]], 
-      width = 6, height = 6, scale = 1, 
-      bg = "white"
+      paste0(results_dir,"_DEG_dots_cluster.svg"),
+      plot_de_dot,width = 9,height = 9
     )
+    Data.all.markers <- all.markers$by.celltype
+    Data.all.markers %>%
+      group_by(cluster) %>%
+      slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
+    plot_de_dot <- DotPlot(
+      object = Data,
+      features = unique(cluster_max$gene),
+      group.by = "singler_by_cluster"
+    )+coord_flip()+
+      theme(
+        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
+        plot.background = element_rect(fill = "white")
+      )
+    ggsave(
+      paste0(results_dir,"_DEG_dots_celltype.svg"),
+      plot_de_dot,width = 9,height = 9
+    )
+    rm(plot_de_dot)
+    
+    ## 小提琴图-----
+    # Data.all.markers %>%
+    #   group_by(cluster) %>%
+    #   slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
+    clusters <- unique(cluster_max$cluster)
+    ncluster <- length(clusters)
+    for (i in 1:ncluster) {
+      genes <- cluster_max$gene[cluster_max$cluster == clusters[i]]
+      # assign(paste0("plot_de_violin_",i),
+      #        VlnPlot(Data, features = genes, slot = "counts", log = TRUE)+
+      #          patchwork::plot_annotation(title = paste0("cluster_",i))
+      # )
+      ggsave(
+        paste0(results_dir,"_deg_violin_cluster_", i,".png"),
+        VlnPlot(
+          Data, features = genes, slot = "counts", log = TRUE, raster = FALSE
+        ),
+        width = ncluster,height = 3
+      )
+    }
+    
+    ## umap图-----
+    for (i in 1:ncluster) {
+      genes <- cluster_max$gene[cluster_max$cluster == clusters[i]]
+      assign(
+        paste0("plot_de_umap_",i),
+        FeaturePlot(
+          Data,
+          features = genes,
+          reduction = "umap",
+          ncol = 3, 
+          raster = FALSE
+        )
+        
+      )
+    }
+    plot_de_umap <- eval(parse(text = paste(
+      "plot_de_umap_",
+      1:ncluster,sep = "",collapse = "/"
+    )))
+    ggsave(
+      paste0(results_dir,"_de_genes_umap.png"),
+      plot_de_umap,width = 12,height = 3*ncluster,limitsize = FALSE
+    )
+    rm(
+      i, plot_de_umap, genes, cluster_max,
+      list = paste("plot_de_umap_",1:ncluster,sep = "")
+    )
+    
+    ## 热图-----
+    Data.all.markers %>%
+      group_by(cluster) %>%
+      top_n(n = 10, wt = avg_log2FC) -> top10
+    plot_heatmap <- DoHeatmap(Data, features = top10$gene, raster = FALSE) + 
+      NoLegend()
+    ggsave(
+      paste0(results_dir,"_heatmap.png"),
+      plot_heatmap,
+      width = ncluster, height = 2*ncluster,
+      scale = 1,
+      limitsize = FALSE
+    )
+    rm(plot_heatmap, top10)
+    
+    ## 火山图-----
+    # volcano figure
+    clusters <- unique(Data.all.markers$cluster)
+    ncluster <- length(unique(Data.all.markers$cluster))
+    cluster_markers_list <- list()
+    for (i in 1:ncluster) {
+      cluster_markers_list[[i]] <- subset(
+        Data.all.markers,
+        cluster == clusters[i],
+        select = c(avg_log2FC,p_val_adj,gene)
+      )
+      names(cluster_markers_list)[i] <- paste0("cluster_",i)
+    }
+    volcano_list <- list()
+    for (i in 1:length(cluster_markers_list)) {
+      volcano_list[[i]] <- plot_volcano(
+        data = cluster_markers_list[[i]], 
+        FC = 1, 
+        PValue = 0.05,
+        volcano_title = names(cluster_markers_list)[i]
+      )
+    }
+    for (i in 1:length(volcano_list)) {
+      ggsave(
+        paste0(results_dir,"_volcano_cluster",i,".png"),
+        volcano_list[[i]], 
+        width = 6, height = 6, scale = 1, 
+        bg = "white"
+      )
+    }
+    rm(volcano_list, clusters)
   }
-  rm(volcano_list, clusters)
+  rm(allmarkers_path)
   
   # Enrich----------------------------------------------------------------------
-  enrichment_dir <- paste0(Results_dir, info$data_name, "_enrichment.rds")
-  if(file.exists(enrichment_dir)){
+  enrichment_path <- paste0(Results_dir, Data_name, "_enrichment.rds")
+  if(file.exists(enrichment_path)){
     cat("\n %%%%% plot Enrichment %%%%% \n")
     results_dir <- paste0(plots_dir, "6_Enrich/")
     if(!dir.exists(results_dir)) dir.create(results_dir)
     results_dir <- paste0(results_dir, Data_name)
-    enrich_plot <- plot_enrich(enrichment_dir, results_dir)
+    
+    enrich_plot <- plot_enrich(enrichment_path, results_dir)
   }
+  rm(enrichment_path)
   
   # Trajectory------------------------------------------------------------------
-  if("cds" %in% names(Data@tools)){
+  cds_path <- paste0(Results_dir, Data_name, "_cds.rds")
+  if(file.exists(cds_path)){
     cat("\n %%%%% Trajectory %%%%% \n")
     results_dir <- paste0(plots_dir, "7_Trajectory/")
     if(!dir.exists(results_dir)) dir.create(results_dir)
     results_dir <- paste0(results_dir,Data_name)
-    cds <- Data@tools$cds
+    
+    cds <- readRDS(cds_path)
     cat("\n %%%%% plot trojectory %%%%% \n")
     plot_trojectory_cluster <- plot_cells(
       cds,
@@ -464,14 +478,16 @@ Plot_seurat <- function(Data){
     )
     rm(plot_trojectory_cluster, plot_trojectory_pseudotime)
   }
+  rm(cds_path)
   
   # CellCommunication-----------------------------------------------------------
-  if("cellchat" %in% names(Data@tools)){
+  cellchat_path <- paste0(Results_dir, Data_name, "_cellchat.rds")
+  if(file.exists(cellchat_path)){
     cat("\n %%%%% plot CellCommunication %%%%% \n")
     results_dir <- paste0(plots_dir, "8_CellCommunication/")
     if(!dir.exists(results_dir)) dir.create(results_dir)
     results_dir <- paste0(results_dir,Data_name)
-    cellchat <- Data@tools$cellchat
+    cellchat <- readRDS(cellchat_path)
     group_size <- as.numeric(table(cellchat@idents))
     # 细胞通讯网络圈图
     filename_interactions_n <- paste0(results_dir,"_interactions_number.png")
@@ -542,15 +558,11 @@ Plot_seurat <- function(Data){
       message("%%% hierarchy error %%%")
     })
     rm(filename_hierarchy)
-    
-    # rm(mat, mat2, clusters, ncluster, plotdim, i, group_size)
-    sink()
   }
+  rm(cellchat_path)
   
+  sink()
   cat("\n %%%%% all plots finished %%%%% \n")
-  Data@tools$all.markers <- NULL
-  Data@tools$cds <- NULL
-  Data@tools$cellchat <- NULL
   saveRDS(Data, paste0(info$results_dir, info$data_name, "_results.rds"))
 }
 

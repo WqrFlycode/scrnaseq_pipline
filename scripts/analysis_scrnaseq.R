@@ -138,119 +138,142 @@ analysis_scrnaseq <- function(
   clustree_plt <- clustree::clustree(
     Data, prefix = paste0(DefaultAssay(Data),"_snn_res.")
   )
-  Data@tools$clustree <- clustree_plt
+  saveRDS(clustree_plt, paste0(results_path,"_clustree.rds"))
   
-  # run annotation-----
-  cat("\n %%%%% run annotation %%%%% \n")
-  Data <- Annotation(
-    Data = Data,
-    ref_singler_dir = ref_singler_dir,
-    ref_cell_dex = ref_cell_dex,
-    ref_markers = ref_markers
-  )
-  # levels(Data$singler_by_cluster) <- sapply(
-  #   strsplit(levels(Data$singler_by_cluster), ":"), 
-  #   function(x) x[1]
-  # )
-  info$ref_cell_dex <- ref_cell_dex
-  info$celltypes <- list(
-    by_seurat = levels(Data$seurat_clusters),
-    by_cell = unique(Data$singler_by_cell),
-    by_cluster = levels(Data$singler_by_cluster)
-  )
   
-  # save celltype count to xlsx
-  celltype_count <- table(Data$singler_by_cluster, Data$orig.ident)
-  celltype_percent <- apply(celltype_count, 2, prop.table)
-  celltype_percent <- round(celltype_percent, digits = 4)*1e2
-  celltype_count <- tidyr::spread(
-    as.data.frame(celltype_count), key = Var2, value = Freq
-  )
-  names(celltype_count)[1] <- "celltypes"
-  celltype_percent <- data.frame(
-    celltypes = rownames(celltype_percent),
-    as.data.frame(celltype_percent)
-  )
-  rownames(celltype_percent) <- NULL
-  xlsx_name <- paste0(results_path,"_celltype_count.xlsx")
-  writexl::write_xlsx(
-    list(count = celltype_count, percent = celltype_percent),
-    path = xlsx_name
-  )
-  rm(celltype_percent,celltype_count,xlsx_name)
+  # run annotation--------------------------------------------------------------
+  tryCatch({
+    cat("\n %%%%% run annotation %%%%% \n")
+    Data <- Annotation(
+      Data = Data,
+      ref_singler_dir = ref_singler_dir,
+      ref_cell_dex = ref_cell_dex,
+      ref_markers = ref_markers
+    )
+    
+    info$ref_cell_dex <- ref_cell_dex
+    info$celltypes <- list(
+      by_seurat = levels(Data$seurat_clusters),
+      by_cell = unique(Data$singler_by_cell),
+      by_cluster = levels(Data$singler_by_cluster)
+    )
+    
+    # save celltype count to xlsx
+    celltype_count <- table(Data$singler_by_cluster, Data$orig.ident)
+    celltype_percent <- apply(celltype_count, 2, prop.table)
+    celltype_percent <- round(celltype_percent, digits = 4)*1e2
+    celltype_count <- tidyr::spread(
+      as.data.frame(celltype_count), key = Var2, value = Freq
+    )
+    names(celltype_count)[1] <- "celltypes"
+    celltype_percent <- data.frame(
+      celltypes = rownames(celltype_percent),
+      as.data.frame(celltype_percent)
+    )
+    rownames(celltype_percent) <- NULL
+    xlsx_name <- paste0(results_path,"_celltype_count.xlsx")
+    writexl::write_xlsx(
+      list(count = celltype_count, percent = celltype_percent),
+      path = xlsx_name
+    )
+    rm(celltype_percent,celltype_count,xlsx_name)
+  }, error = function(e){
+    # save info
+    saveRDS(info, paste0(results_path, "_info.rds"))
+    Data@tools$info <- info
+    # save Data
+    saveRDS(Data, paste0(results_path, "_results.rds"))
+    sink()
+    stop("%%% annotation error %%%")
+  })
+  
   
   # run find marker-------------------------------------------------------------
-  all.markers <- list()
-  cat("\n %%%%% run FindAllMarkers by seurat cluster %%%%% \n")
-  Data.all.markers.by.cluster <- FindAllMarkers(
-    Data, 
-    features = Data@assays$RNA@var.features
-  )
-  all.markers$by.cluster <- Data.all.markers.by.cluster
-  
-  Idents(Data) <- Data@meta.data[,"singler_by_cluster"]
-  cat("\n %%%%% run FindAllMarkers by cell types %%%%% \n")
-  Data.all.markers.by.celltype <- FindAllMarkers(
-    Data, 
-    features = Data@assays$RNA@var.features
-  )
-  all.markers$by.celltype <- Data.all.markers.by.celltype
-  
-  all.markers_dir <- paste0(results_path, "_all.markers.rds")
-  info$all.markers_dir <- all.markers_dir
-  saveRDS(all.markers, all.markers_dir)
-  Data@tools$all.markers <- all.markers
-  
-  Idents(Data) <- Data$seurat_clusters
-  
-  clusters <- levels(Data$seurat_clusters)
-  names(clusters) <- paste0("cluster_",clusters)
-  cluster_markers_list <- lapply(clusters, function(x){
-    subset(
-      Data.all.markers.by.cluster,
-      cluster == x,
-      select = c(avg_log2FC,p_val_adj,gene)
+  tryCatch({
+    cat("\n %%%%% run FindAllMarkers by seurat cluster %%%%% \n")
+    all.markers <- list()
+    Data.all.markers.by.cluster <- FindAllMarkers(
+      Data, 
+      features = Data@assays$RNA@var.features
     )
+    all.markers$by.cluster <- Data.all.markers.by.cluster
+    
+    Idents(Data) <- Data@meta.data[,"singler_by_cluster"]
+    cat("\n %%%%% run FindAllMarkers by cell types %%%%% \n")
+    Data.all.markers.by.celltype <- FindAllMarkers(
+      Data, 
+      features = Data@assays$RNA@var.features
+    )
+    all.markers$by.celltype <- Data.all.markers.by.celltype
+    
+    all.markers_dir <- paste0(results_path, "_all.markers.rds")
+    info$all.markers_dir <- all.markers_dir
+    saveRDS(all.markers, all.markers_dir)
+    Data@tools$all.markers <- all.markers
+    
+    Idents(Data) <- Data$seurat_clusters
+    
+    # save DEG list
+    clusters <- levels(Data$seurat_clusters)
+    names(clusters) <- paste0("cluster_",clusters)
+    cluster_markers_list <- lapply(clusters, function(x){
+      subset(
+        Data.all.markers.by.cluster,
+        cluster == x,
+        select = c(avg_log2FC,p_val_adj,gene)
+      )
+    })
+    genes <- lapply(cluster_markers_list, function(x){
+      dplyr::filter(
+        x,
+        p_val_adj < 0.05,
+        avg_log2FC > 1 | avg_log2FC < -1
+      )$gene
+    })
+    Data@tools$DEG <- genes
+    saveRDS(genes, paste0(results_path, "_deg.rds"))
+  }, error = function(e){
+    # save info
+    saveRDS(info, paste0(results_path, "_info.rds"))
+    Data@tools$info <- info
+    # save Data
+    saveRDS(Data, paste0(results_path, "_results.rds"))
+    sink()
+    stop("%%% find DEG error %%%")
   })
-  genes <- lapply(cluster_markers_list, function(x){
-    dplyr::filter(
-      x,
-      p_val_adj < 0.05,
-      avg_log2FC > 1 | avg_log2FC < -1
-    )$gene
-  })
-  Data@tools$DEG <- genes
-  saveRDS(genes, paste0(results_path, "_deg.rds"))
   
   # run enrich------------------------------------------------------------------
   if(run_enrich == TRUE) {
-    enrichment <- Enrich(
-      marker_list = genes,
-      Species = info$Species,
-      ncl = ncl # 线程数
-    )
-    
-    # save enrichment
-    saveRDS(enrichment, paste0(results_path, "_enrichment.rds"))
-    enrichment_dataframe <- lapply(enrichment, function(x){
-      lapply(x, function(y){
-        dplyr::filter(y@result, p.adjust < 0.05)
-      })
-    })
-    enrich_dir <- paste0(results_path, "_enrich_table/")
-    if(!dir.exists(enrich_dir)) dir.create(enrich_dir)
-    for(go in names(enrichment_dataframe)){
-      writexl::write_xlsx(
-        enrichment_dataframe[[go]],
-        path = paste0(enrich_dir,info$data_name,"_",go,".xlsx")
+    tryCatch({
+      enrichment <- Enrich(
+        marker_list = genes,
+        Species = info$Species,
+        ncl = ncl # 线程数
       )
-    }
-    rm(enrichment,enrichment_dataframe,enrich_dir)
+      
+      # save enrichment
+      saveRDS(enrichment, paste0(results_path, "_enrichment.rds"))
+      enrichment_dataframe <- lapply(enrichment, function(x){
+        lapply(x, function(y){
+          dplyr::filter(y@result, p.adjust < 0.05)
+        })
+      })
+      enrich_dir <- paste0(results_path, "_enrich_table/")
+      if(!dir.exists(enrich_dir)) dir.create(enrich_dir)
+      for(go in names(enrichment_dataframe)){
+        writexl::write_xlsx(
+          enrichment_dataframe[[go]],
+          path = paste0(enrich_dir,info$data_name,"_",go,".xlsx")
+        )
+      }
+      rm(enrichment,enrichment_dataframe,enrich_dir)
+    }, error = function(e){
+      message("%%% enrich error %%%")
+    })
   }
   
   # run TrajectoryAnalysis------------------------------------------------------
   if(run_TA == TRUE) {
-    
     info$by_cluster <- "seurat_clusters"
     tryCatch({
       cds <- TrajectoryAnalysis(
@@ -259,7 +282,6 @@ analysis_scrnaseq <- function(
       cds_dir <- paste0(results_path, "_cds.rds")
       info$cds_dir <- cds_dir
       saveRDS(cds, cds_dir)
-      Data@tools$cds <- cds
     }, error = function(e){
       message("%%% TrajectoryAnalysis error %%%")
     })
@@ -274,7 +296,6 @@ analysis_scrnaseq <- function(
       cellchat_dir <- paste0(results_path, "_cellchat.rds")
       info$cellchat_dir <- cellchat_dir
       saveRDS(cellchat, cellchat_dir)
-      Data@tools$cellchat <- cellchat
     }, error = function(e){
       message("%%% CellChat error %%%")
     })
@@ -283,7 +304,6 @@ analysis_scrnaseq <- function(
   # save info
   saveRDS(info, paste0(results_path, "_info.rds"))
   Data@tools$info <- info
-  
   # save Data
   saveRDS(Data, paste0(results_path, "_results.rds"))
   cat("\n %%%%% all analysis finished %%%%% \n")

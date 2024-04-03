@@ -26,7 +26,7 @@ suppressMessages(library(ReactomePA))
 # suppressMessages(library(pathview))
 # suppressMessages(library(org.Hs.eg.db))
 
-# library(ShinyCell)
+suppressMessages(library(ShinyCell))
 
 # source------------------------------------------------------------------------
 function_dir <- "scripts/"

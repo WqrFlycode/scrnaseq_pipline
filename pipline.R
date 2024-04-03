@@ -10,15 +10,15 @@ source("scripts/library_source.R")
 ## 2.所有路径中使用“/”，最后一级路径后面也要带“/”
 ## 3.文件名称应为*matrix.mtx.gz; *barcodes.tsv.gz; *
 
+datadir <- "D:/Data/scRNA-seq/case/"
 Data <- ReadData_10X(
-  data_dir = "D:/Data/scRNA-seq/case/",
+  data_dir = datadir,
   filename = "case",
   data_name = "case",
-  Species = "human", # "human"; "mouse"; "zebrafish"
-  results_dir = NULL
+  Species = "human" # "human"; "mouse"; "zebrafish"
 )
 
-Data <- readRDS("D:/Data/scRNA-seq/case/case_results/case_raw_seurat.rds")
+Data <- readRDS("D:/Data/scRNA-seq/case/case_raw_seurat.rds")
 results_dir = NULL
 min_nFeature = 100
 min_nCount = 100
@@ -31,6 +31,10 @@ resolution = 0.3
 ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/"
 ref_cell_dex = "HumanPrimaryCellAtlasData"
 ref_markers = NULL
+ncl = 1
+run_enrich = FALSE
+run_TA = TRUE
+run_CC = TRUE
 
 # analysis
 Data <- analysis_scrnaseq(
@@ -40,9 +44,10 @@ Data <- analysis_scrnaseq(
   pc_num = 50,resolution = 0.3,
   # ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
   ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/",
-  ref_cell_dex = "MonacoImmuneData",
+  ref_cell_dex = "HumanPrimaryCellAtlasData",
   ref_markers = NULL,
-  ncl = 1
+  ncl = 6,
+  run_enrich = FALSE, run_TA = TRUE, run_CC = TRUE
 )
 
 Plot_seurat(Data = Data)
@@ -58,12 +63,6 @@ rmarkdown::render(
   )
 )
 
-# 并行
-library(future)
-plan(sequential)
-plan(multisession, workers = 2)
-plan()
-
 # ShinyApp
 scConf = createConfig(Data)
 makeShinyApp(
@@ -71,7 +70,6 @@ makeShinyApp(
   scConf, 
   gene.mapping = TRUE,
   shiny.title = "ShinyCell Quick Start",
-  shiny.dir = paste0("D:/Data/scRNA-seq/chicken_9_GSE146809/", "shinyApp/")
+  shiny.dir = paste0(datadir, "shinyApp/")
 ) 
 
-Data <- Read_results("E:/Data/MY_Mouse_10S/ZLC23HXY30402/ZLC23HXY30402_results/ZLC23HXY30402_info.rds")
