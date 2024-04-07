@@ -25,7 +25,7 @@ Enrich <- function(marker_list, Species, ncl){
   } else if(Species == "mouse") {
     Organisms <- "mmu" # Mus musculus (house mouse)
   } else if(Species == "pig") {
-    Organisms <- "org.Ss.eg.db"
+    Organisms <- "ssc" # Sus scrofa (pig)
   }
   
   cl <- makeCluster(ncl)
