@@ -2,6 +2,7 @@
 TrajectoryAnalysis <- function(Data, by_cluster = "singler_by_cluster"){
   cat("\n %%%%% transfer seurat to cds %%%%% \n")
   cds <- SeuratWrappers::as.cell_data_set(Data)
+  rm(Data);gc()
   cat("\n %%%%% cluster_cells %%%%% \n")
   cds <- cluster_cells(cds, reduction_method = "UMAP")
   cat("\n %%%%% learn_graph %%%%% \n")

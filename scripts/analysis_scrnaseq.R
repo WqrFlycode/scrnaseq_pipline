@@ -287,6 +287,13 @@ analysis_scrnaseq <- function(
     })
   }
   
+  # save info
+  saveRDS(info, paste0(results_path, "_info.rds"))
+  Data@tools$info <- info
+  # save Data
+  saveRDS(Data, paste0(results_path, "_results.rds"))
+  gc()
+  
   # run TrajectoryAnalysis------------------------------------------------------
   if(run_TA == TRUE) {
     info$by_cluster <- "seurat_clusters"
@@ -297,6 +304,7 @@ analysis_scrnaseq <- function(
       cds_dir <- paste0(results_path, "_cds.rds")
       info$cds_dir <- cds_dir
       saveRDS(cds, cds_dir)
+      rm(cds);gc()
     }, error = function(e){
       message("%%% TrajectoryAnalysis error %%%")
     })
@@ -311,16 +319,12 @@ analysis_scrnaseq <- function(
       cellchat_dir <- paste0(results_path, "_cellchat.rds")
       info$cellchat_dir <- cellchat_dir
       saveRDS(cellchat, cellchat_dir)
+      rm(cellchat);gc()
     }, error = function(e){
       message("%%% CellChat error %%%")
     })
   }
   
-  # save info
-  saveRDS(info, paste0(results_path, "_info.rds"))
-  Data@tools$info <- info
-  # save Data
-  saveRDS(Data, paste0(results_path, "_results.rds"))
   cat("\n %%%%% all analysis finished %%%%% \n")
   sink()
   return(Data)

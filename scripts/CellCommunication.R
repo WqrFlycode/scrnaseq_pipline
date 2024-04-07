@@ -9,13 +9,6 @@ CellCommunication <- function(Data, by_cluster = "singler_by_cluster"){
   # 
   # net_dir <- paste0(results_dir,"_cellchat_",
   #                   c("net","netP","group_size"),".rds")
-  
-  cat("\n %%%%% create cellchat object %%%%% \n")
-  data.input <- GetAssayData(Data, assay = "RNA", slot = "data")
-  meta <- subset(Data@meta.data, select = by_cluster)
-  cellchat <- createCellChat(object = data.input, meta = meta, group.by = by_cluster)
-  # cellchat <- createCellChat(object = Data, meta = Data@meta.data, group.by = by_cluster)
-  
   cat("\n %%%%% input ligand-receptor database %%%%% \n")
   Species <- Data@tools$info$Species
   if(Species == "human"){
@@ -27,6 +20,13 @@ CellCommunication <- function(Data, by_cluster = "singler_by_cluster"){
   } else {
     stop("指定species")
   }
+  
+  cat("\n %%%%% create cellchat object %%%%% \n")
+  data.input <- GetAssayData(Data, assay = "RNA", slot = "data")
+  meta <- subset(Data@meta.data, select = by_cluster)
+  cellchat <- createCellChat(object = data.input, meta = meta, group.by = by_cluster)
+  # cellchat <- createCellChat(object = Data, meta = Data@meta.data, group.by = by_cluster)
+  rm(Data);gc()
   
   cat("\n %%%%% subsetData %%%%% \n")
   cellchat <- subsetData(cellchat)
