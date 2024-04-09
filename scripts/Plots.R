@@ -239,7 +239,7 @@ Plot_seurat <- function(Data){
   }
   rm(plot_umap_all)
   
-  ## 堆积图---------------------------------------------------------------------
+  ## bar-----
   # 样本和细胞类型交叉表
   mydata <- table(Data$orig.ident, Data$singler_by_cluster)
   mydata <- mydata/rowSums(mydata)
@@ -291,11 +291,13 @@ Plot_seurat <- function(Data){
     results_dir <- paste0(results_dir,Data_name)
     
     all.markers <- readRDS(allmarkers_path)
+    
+    ## bubble-----
     Data.all.markers <- all.markers$by.cluster
-    Data.all.markers %>%
+    cluster_max <- Data.all.markers %>%
+      filter(p_val < 0.05, p_val_adj < 0.05, avg_log2FC > 0) %>%
       group_by(cluster) %>%
-      slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
-    ## 气泡图-----
+      slice_max(n = 3, order_by = avg_log2FC)
     plot_de_dot <- DotPlot(
       object = Data,
       features = unique(cluster_max$gene)
@@ -308,6 +310,7 @@ Plot_seurat <- function(Data){
       paste0(results_dir,"_DEG_dots_cluster.svg"),
       plot_de_dot,width = 9,height = 9
     )
+    
     Data.all.markers <- all.markers$by.celltype
     Data.all.markers %>%
       group_by(cluster) %>%
@@ -327,10 +330,7 @@ Plot_seurat <- function(Data){
     )
     rm(plot_de_dot)
     
-    ## 小提琴图-----
-    # Data.all.markers %>%
-    #   group_by(cluster) %>%
-    #   slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
+    ## violin-----
     clusters <- unique(cluster_max$cluster)
     ncluster <- length(clusters)
     for (i in 1:ncluster) {
@@ -348,7 +348,7 @@ Plot_seurat <- function(Data){
       )
     }
     
-    ## umap图-----
+    ## umap-----
     for (i in 1:ncluster) {
       genes <- cluster_max$gene[cluster_max$cluster == clusters[i]]
       assign(
@@ -376,7 +376,7 @@ Plot_seurat <- function(Data){
       list = paste("plot_de_umap_",1:ncluster,sep = "")
     )
     
-    ## 热图-----
+    ## heatmap-----
     Data.all.markers %>%
       group_by(cluster) %>%
       top_n(n = 10, wt = avg_log2FC) -> top10
@@ -391,10 +391,8 @@ Plot_seurat <- function(Data){
     )
     rm(plot_heatmap, top10)
     
-    ## 火山图-----
+    ## volcano-----
     # volcano figure
-    clusters <- unique(Data.all.markers$cluster)
-    ncluster <- length(unique(Data.all.markers$cluster))
     cluster_markers_list <- list()
     for (i in 1:ncluster) {
       cluster_markers_list[[i]] <- subset(
@@ -404,6 +402,7 @@ Plot_seurat <- function(Data){
       )
       names(cluster_markers_list)[i] <- paste0("cluster_",i)
     }
+    
     volcano_list <- list()
     for (i in 1:length(cluster_markers_list)) {
       volcano_list[[i]] <- plot_volcano(
