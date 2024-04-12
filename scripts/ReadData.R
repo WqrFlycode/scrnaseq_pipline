@@ -1,3 +1,17 @@
+saveinfo <- function(data_name, data_dir, Species, rawdim){
+  info <- list()
+  info$data_name <- data_name
+  info$Species <- Species
+  info$dir$dir <- paste0(dirname(data_dir), "/")
+  info$dir$data <- paste0(basename(data_dir), "/")
+  info$filename$info <- paste0(data_name,"_info.rds")
+  info$filename$raw <- paste0(data_name, "_raw_seurat.rds")
+  info$dim$raw <- rawdim
+  names(info$dim$raw) <- c("gene", "cell")
+  cat("----------create", data_name, "info----------\n")
+  return(info)
+}
+
 ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL){
   files <- list.files(data_dir)
   exist_files <- files[grep(filename, files)]
@@ -20,7 +34,7 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
   if (!any(is.na(exist_data_names))) {
     sample_files <- paste0(data_dir,exist_data_names)
     # read expression matrix
-    data <- Matrix::readMM(file = sample_files[1])
+    Data <- Matrix::readMM(file = sample_files[1])
     
     # read cells
     barcode.names = read.delim(
@@ -28,7 +42,7 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
       header = FALSE,
       stringsAsFactors = FALSE
     )
-    colnames(data) = barcode.names$V1
+    colnames(Data) = barcode.names$V1
     
     # read genes
     gene.names = read.delim(
@@ -37,46 +51,35 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
       stringsAsFactors = FALSE
     )
     if (ncol(gene.names) == 1) {
-      rownames(data) <-  gene.names$V1  
+      rownames(Data) <-  gene.names$V1  
     } else {
-      rownames(data) <-  gene.names$V2
+      rownames(Data) <-  gene.names$V2
     }
     
     # create Seurat object
-    data <- CreateSeuratObject(counts = data, project = data_name)
+    Data <- CreateSeuratObject(counts = Data, project = data_name)
     
     # save parameters to info
-    info <- list()
-    info$data_name <- data_name
-    info$data_dir <- data_dir
-    info$Species <- Species
-    data@tools$info <- info
-  } 
-  saveRDS(data, paste0(data_dir,data_name,"_raw_seurat.rds"))
-  
-  cat("\n----------Read data ", filename, "finished----------\n")
-  return(data)
+    info <- saveinfo(
+      data_name = data_name,
+      data_dir = data_dir,
+      Species = Species,
+      rawdim = dim(Data)
+    )
+    Data@tools$info <- info
+    raw_data_path <- paste0(info$dir$dir, info$filename$raw)
+    saveRDS(Data, raw_data_path)
+    cat("\nsave raw data to: \n", raw_data_path, "\n")
+    cat("----------Read data", filename, "finished----------\n")
+    return(Data)
+  }else{
+    stop("Missing 10X files")
+  }
 }
 
-saveinfo <- function(seuratobject, data_dir, data_name, Species = NULL, results_dir = NULL){
-  if (is.null(results_dir)) {
-    results_dir <- paste0(data_dir,"/",data_name,"_results/")
-  }
-  # create result direction
-  if (!dir.exists(results_dir)) {
-    dir.create(results_dir)
-  }
-
-  info <- list()
-  info$data_name <- data_name
-  info$data_dir <- data_dir
-  info$results_dir <- results_dir
-  info$Species <- Species
-  seuratobject@tools$info <- info
-
-  saveRDS(seuratobject, paste0(results_dir,data_name,"_raw_seurat.rds"))
-  cat("\n----------add data ", data_name, "info----------")
-  return(seuratobject)
+ReadData_h5 <- function(data_dir, filename, data_name = "case", Species = NULL) {
+  Data <- Read10X_h5("D:/Data/scRNA-seq/GSM5229719/GSM5229719_Ch1_raw_feature_bc_matrix.h5")
+  Data <- CreateSeuratObject(Data)
 }
 
 ReadData_csv <- function(data_dir, data_name = "case", results_dir = NULL){

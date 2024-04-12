@@ -1,88 +1,87 @@
-QualityControl <- function(Data, figure_format = "png"){
-  results_dir <- paste0(
-    Data@tools$results_dir,
-    "/QualityControl/",
-    Data@tools$data_name
+QualityControl <- function(
+    Data,
+    min_nFeature = 100, min_nCount = 100,
+    max_percent_mito = 30, max_percent_ribo = 50
+){
+  info <- Data@tools$info
+  # create QC dir
+  info$dir$qc <- paste0(info$data_name, "_qc/")
+  QC_dir <- paste0(info$dir$dir, info$dir$qc)
+  if (!dir.exists(QC_dir)) dir.create(QC_dir)
+  
+  # origin info
+  info$qc_threshold <- c(
+    min_nFeature, min_nCount, max_percent_mito, max_percent_ribo
+  )
+  names(info$qc_threshold) <- c(
+    "min_nFeature", "min_nCount", "max_percent_mito", "max_percent_ribo"
   )
   
-  
-  number_before <- dim(Data) # 细胞和基因的数量
-  qc_index <- c("nFeature_RNA", "nCount_RNA", "percent.mito", "percent.ribo")
   # compute the proportion of mito-genes expression
-  Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = "^MT-") 
+  if (info$Species == "mouse") {
+    pattern_mt <- "^mt-"
+  }else{
+    pattern_mt <- "^MT-"
+  }
+  Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = pattern_mt)
   # compute the proportion of ribo-genes expression
   Data[["percent.ribo"]] <- PercentageFeatureSet(Data, pattern = "^RP[SL]")
-  # results is percentage times 100
-  # plot violion before QC-----
-  plot_qc <- suppressWarnings(
-    VlnPlot(
-      Data, 
-      features = qc_index, 
-      ncol = length(qc_index),
-      group.by = "orig.ident"
-    )
-  )
-  ggsave(
-    paste0(results_dir,"_before_qc.",figure_format),
-    plot_qc, width = 12, height = 6
-  )
+  # 计算红血细胞基因比例
+  # if(! "percent.hb" %in% names(Data@meta.data)){
+  #   Data[["percent.hb"]] <- PercentageFeatureSet(Data, pattern = "^Hb[^(p)]")
+  # }
+  # percentage times 100
+  
+  plot_qc(Data, output_dir = QC_dir, status = "raw")
   
   # QC-----
-  cat("\n %%%%% run quality control %%%%% \n")
+  cat("\n %%%%% run quality control %%%%% \n") # 3sigma, mad
   Data <- subset(
     Data,
-    subset = nFeature_RNA > 100 & 
-      nCount_RNA > 100 & # nCount_RNA < 1e5 &
-      percent.mito < 30 &
-      percent.ribo < 50,
+    subset =
+      nFeature_RNA > min_nFeature &
+      nCount_RNA > min_nCount &
+      percent.mito < max_percent_mito &
+      percent.ribo < max_percent_ribo,
     features = row.names(Data)[rowSums(GetAssayData(Data,slot = "counts")>0)>0]
   )
-  meta.data <- Data@meta.data
-  write.csv(meta.data, paste0(results_dir,"_qc_metadata.csv"))
-  
-  # output-----
-  number_after <- dim(Data)
-  difference <- number_before - number_after
-  cat("\n 剔除细胞",difference[1],"个，基因",difference[2],"个 \n")
-  number <- matrix(c(number_before,number_after,difference),ncol = 2,byrow = T)
-  rownames(number) <- c("before","after","discard")
-  colnames(number) <- c("features","cells")
-  write.csv(number,file = paste0(results_dir,"_difference.csv"))
-  # plot violion after QC-----
-  plot_qc <- suppressWarnings(
-    VlnPlot(
-      Data,
-      features = c(qc_index),
-      ncol = length(qc_index),
-      group.by = "orig.ident"
-    )
+  # box
+  outlier_range <- function(x, n = 1.5){
+    l <- sum(fivenum(x)*c(0,1+n,0,-n,0))
+    u <- sum(fivenum(x)*c(0,-n,0,1+n,0))
+    return(c(l,u))
+  }
+  nFeature_lu <- outlier_range(Data$nFeature_RNA,n = 3) # lower & upper
+  nCount_lu <- outlier_range(Data$nCount_RNA,n = 3)
+  Data <- subset(
+    Data,
+    subset =
+      nFeature_RNA < nFeature_lu[2] &
+      nCount_RNA < nCount_lu[2]
   )
-  ggsave(
-    paste0(results_dir,"_after_qc.",figure_format),
-    plot_qc,width = 12,height = 6
-  )
-  # QC-index scatter-----
-  suppressWarnings(
-    plot_FeatureScatter <- 
-      FeatureScatter(
-        Data,feature1 = "nCount_RNA",feature2 = "nFeature_RNA",
-        group.by = "orig.ident"
-      )+NoLegend()+
-      FeatureScatter(
-        Data,feature1 = "nCount_RNA",feature2 = "percent.mito",
-        group.by = "orig.ident"
-      )+NoLegend()+
-      FeatureScatter(
-        Data,feature1 = "nCount_RNA",feature2 = "percent.ribo",
-        group.by = "orig.ident"
-      )+NoLegend()
-  )
+  info$dim$filter <- dim(Data)
+  names(info$dim$filter) <- c("gene", "cell")
+  data_dim <- rbind(info$dim$raw, info$dim$filter, info$dim$raw-info$dim$filter)
+  rownames(data_dim) <- c("raw","filter","remove")
+  cat("\n");print(data_dim)
+  cat("\nremove percent\n")
+  print(  round(data_dim[3,]/data_dim[1,]*100, digits = 2))
   
-  ggsave(paste0(results_dir,"_qc_index_scatter.",figure_format),
-         plot_FeatureScatter,width = 12,height = 6)
+  plot_qc(Data, output_dir = QC_dir, status = "qc")
   
   
-  # saveRDS(Data,file = paste0(results_dir, "_qc.rds"))
+  # save qc data
+  info$filename$qc <- paste0(info$data_name, "_qc_seurat.rds")
+  Data@tools$info <- info
+  qc_data_path <- paste0(info$dir$dir, info$filename$qc)
+  saveRDS(Data, qc_data_path)
+  cat("\nsave qc data to: \n", qc_data_path)
+  
+  # save info
+  info_path <- paste0(info$dir$dir, info$filename$info)
+  saveRDS(info, info_path)
+  cat("\nsave info to: \n", info_path, "\n")
+  
   cat("\n----------Quality control finished----------\n")
   return(Data)
 }

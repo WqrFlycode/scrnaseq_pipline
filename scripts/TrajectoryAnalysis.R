@@ -2,23 +2,12 @@
 TrajectoryAnalysis <- function(Data, by_cluster = "singler_by_cluster"){
   cat("\n %%%%% transfer seurat to cds %%%%% \n")
   cds <- SeuratWrappers::as.cell_data_set(Data)
-  rm(Data);gc()
   cat("\n %%%%% cluster_cells %%%%% \n")
   cds <- cluster_cells(cds, reduction_method = "UMAP")
   cat("\n %%%%% learn_graph %%%%% \n")
   cds <- learn_graph(cds,use_partition = TRUE)
-  # cat("\n %%%%% select nodes %%%%% \n")
-  # root_pr_nodes <- sapply(
-  #   levels(colData(cds)[,by_cluster]), function(x){
-  #     get_earliest_principal_node(
-  #       cds, my_select = x, by_cluster = by_cluster
-  #     )
-  #   }
-  # )
   cat("\n %%%%% Order the cells in pseudotime %%%%% \n")
   cds <- order_cells(cds, root_pr_nodes = "Y_1")
-  
-  # cds@assays <- NULL
   
   cat("\n ----------TrajectoryAnalysis finished---------- \n")
   return(cds)

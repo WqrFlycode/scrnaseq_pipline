@@ -16,7 +16,6 @@ CellCommunication <- function(Data, by_cluster = "singler_by_cluster"){
   meta <- subset(Data@meta.data, select = by_cluster)
   cellchat <- createCellChat(object = data.input, meta = meta, group.by = by_cluster)
   # cellchat <- createCellChat(object = Data, meta = Data@meta.data, group.by = by_cluster)
-  rm(Data);gc()
   
   cat("\n %%%%% input ligand-receptor database %%%%% \n")
   if(Species == "human"){

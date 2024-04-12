@@ -1,8 +1,9 @@
 Plot_seurat <- function(Data){
   info <- Data@tools$info
-  Results_dir <- info$results_dir
+  Results_dir <- paste0(info$dir$dir, info$dir$results)
   Data_name <- info$data_name
   plots_dir <- paste0(Results_dir, "/plots/")
+  rds_dir <- paste0(info$dir$dir, info$dir$rds)
   if(!dir.exists(plots_dir)) {
     dir.create(plots_dir)
   }
@@ -11,51 +12,6 @@ Plot_seurat <- function(Data){
     append = FALSE,
     split = TRUE
   )
-  
-  # QC--------------------------------------------------------------------------
-  cat("\n %%%%% plot QC %%%%% \n")
-  results_dir <- paste0(plots_dir, "1_QualityControl/", Data_name)
-  qc_index <- c(
-    "nFeature_RNA", "nCount_RNA", "percent.mito", 
-    "percent.ribo", "percent.redcell"
-  )
-  qc_index <- qc_index[qc_index %in% names(Data@meta.data)]
-  
-  # plot violion after QC
-  plot_qc <- suppressWarnings(
-    VlnPlot(
-      Data,
-      features = qc_index,
-      group.by = "orig.ident",
-      ncol = 4,
-      raster = FALSE
-    )
-  )
-  ggsave(
-    paste0(results_dir,"_after_qc.png"),
-    plot_qc,
-    width = 4*length(unique(Data$orig.ident)),
-    height = 6 # *ceiling(length(qc_index)/3)
-    # QC-index scatter
-  )
-  suppressWarnings(
-    plot_FeatureScatter <- 
-      FeatureScatter(
-        Data,feature1 = "nCount_RNA",feature2 = "nFeature_RNA",
-        group.by = "orig.ident"
-      )+NoLegend()+
-      FeatureScatter(
-        Data,feature1 = "nCount_RNA",feature2 = "percent.mito",
-        group.by = "orig.ident"
-      )+NoLegend()+
-      FeatureScatter(
-        Data,feature1 = "nCount_RNA",feature2 = "percent.ribo",
-        group.by = "orig.ident"
-      )+NoLegend()
-  )
-  ggsave(paste0(results_dir,"_qc_index_scatter.png"),
-         plot_FeatureScatter,width = 12,height = 6)
-  rm(plot_FeatureScatter, plot_qc, qc_index)
   
   # DimReduction----------------------------------------------------------------
   cat("\n %%%%% plot DR %%%%% \n")
@@ -101,16 +57,6 @@ Plot_seurat <- function(Data){
   results_dir <- paste0(plots_dir, "3_Clustering/")
   if(!dir.exists(results_dir)) dir.create(results_dir)
   results_dir <- paste0(results_dir, Data_name)
-  
-  clustree_plt_path <- paste0(Results_dir, Data_name, "_clustree.rds")
-  if(file.exists(clustree_plt_path)) {
-    clustree_plt <- readRDS(clustree_plt_path)
-    ggsave(
-      paste0(results_dir,"_clustree.svg"),
-      clustree_plt,
-      width = 10,height = 10
-    )
-  }
   
   # 判断是否进行批次效应
   if (length(unique(Data$orig.ident)) == 1) {
@@ -283,7 +229,7 @@ Plot_seurat <- function(Data){
   rm(data, n_celltypes, plot_bar)
   
   # Markers---------------------------------------------------------------------
-  allmarkers_path <- paste0(Results_dir, Data_name, "_all.markers.rds")
+  allmarkers_path <- paste0(rds_dir,info$filename$all_markers)
   if(file.exists(allmarkers_path)) {
     cat("\n %%%%% plot differential expressing genes %%%%% \n")
     results_dir <- paste0(plots_dir, "5_DifferentialExpressing/")
@@ -293,8 +239,8 @@ Plot_seurat <- function(Data){
     all.markers <- readRDS(allmarkers_path)
     
     ## bubble-----
-    Data.all.markers <- all.markers$by.cluster
-    cluster_max <- Data.all.markers %>%
+    cluster_markers <- all.markers$by.cluster
+    cluster_max <- cluster_markers %>%
       filter(p_val < 0.05, p_val_adj < 0.05, avg_log2FC > 0) %>%
       group_by(cluster) %>%
       slice_max(n = 3, order_by = avg_log2FC)
@@ -311,13 +257,13 @@ Plot_seurat <- function(Data){
       plot_de_dot,width = 9,height = 9
     )
     
-    Data.all.markers <- all.markers$by.celltype
-    Data.all.markers %>%
+    celltype_markers <- all.markers$by.celltype
+    celltype_markers %>%
       group_by(cluster) %>%
-      slice_max(n = 3, order_by = avg_log2FC) -> cluster_max
+      slice_max(n = 3, order_by = avg_log2FC) -> celltype_max
     plot_de_dot <- DotPlot(
       object = Data,
-      features = unique(cluster_max$gene),
+      features = unique(celltype_max$gene),
       group.by = "singler_by_cluster"
     )+coord_flip()+
       theme(
@@ -377,10 +323,9 @@ Plot_seurat <- function(Data){
     )
     
     ## heatmap-----
-    Data.all.markers %>%
-      group_by(cluster) %>%
-      top_n(n = 10, wt = avg_log2FC) -> top10
-    plot_heatmap <- DoHeatmap(Data, features = top10$gene, raster = FALSE) + 
+    plot_heatmap <- DoHeatmap(
+      Data, features = cluster_max$gene, raster = FALSE
+    ) + 
       NoLegend()
     ggsave(
       paste0(results_dir,"_heatmap.png"),
@@ -389,14 +334,14 @@ Plot_seurat <- function(Data){
       scale = 1,
       limitsize = FALSE
     )
-    rm(plot_heatmap, top10)
+    rm(plot_heatmap)
     
     ## volcano-----
     # volcano figure
     cluster_markers_list <- list()
     for (i in 1:ncluster) {
       cluster_markers_list[[i]] <- subset(
-        Data.all.markers,
+        cluster_markers,
         cluster == clusters[i],
         select = c(avg_log2FC,p_val_adj,gene)
       )
@@ -425,7 +370,7 @@ Plot_seurat <- function(Data){
   rm(allmarkers_path)
   
   # Enrich----------------------------------------------------------------------
-  enrichment_path <- paste0(Results_dir, Data_name, "_enrichment.rds")
+  enrichment_path <- paste0(rds_dir,info$filename$enrich)
   if(file.exists(enrichment_path)){
     cat("\n %%%%% plot Enrichment %%%%% \n")
     results_dir <- paste0(plots_dir, "6_Enrich/")
@@ -437,7 +382,7 @@ Plot_seurat <- function(Data){
   rm(enrichment_path)
   
   # Trajectory------------------------------------------------------------------
-  cds_path <- paste0(Results_dir, Data_name, "_cds.rds")
+  cds_path <- paste0(rds_dir,info$filename$cds)
   if(file.exists(cds_path)){
     cat("\n %%%%% Trajectory %%%%% \n")
     results_dir <- paste0(plots_dir, "7_Trajectory/")
@@ -480,7 +425,7 @@ Plot_seurat <- function(Data){
   rm(cds_path)
   
   # CellCommunication-----------------------------------------------------------
-  cellchat_path <- paste0(Results_dir, Data_name, "_cellchat.rds")
+  cellchat_path <- paste0(rds_dir,info$filename$cellchat)
   if(file.exists(cellchat_path)){
     cat("\n %%%%% plot CellCommunication %%%%% \n")
     results_dir <- paste0(plots_dir, "8_CellCommunication/")
