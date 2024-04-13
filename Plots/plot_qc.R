@@ -19,6 +19,18 @@ plot_qc <- function(Data, output_dir, status) {
       raster = FALSE
     )
   )
+  setbreak <- function(Range) {
+    maxint <- signif(Range[2], digits = 1)
+    intbreaks <- seq.int(0, maxint, length.out = 3)[-1]
+    breaks <- c(Range[1], intbreaks, Range[2])
+    breaks <- sort(breaks)
+    breaks <- breaks[!duplicated(signif(breaks,digits = 1))]
+    return(breaks)
+  }
+  plot_qc[[1]] <- plot_qc[[1]] + 
+    scale_y_continuous(breaks = setbreak(range(Data$nFeature_RNA)))
+  plot_qc[[2]] <- plot_qc[[2]] + 
+    scale_y_continuous(breaks = setbreak(range(Data$nCount_RNA)))
   ggsave(
     paste0(results_dir,".png"),
     plot_qc,

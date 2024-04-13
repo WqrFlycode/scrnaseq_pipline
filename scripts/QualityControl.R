@@ -10,13 +10,6 @@ QualityControl <- function(
   if (!dir.exists(QC_dir)) dir.create(QC_dir)
   
   # origin info
-  info$qc_threshold <- c(
-    min_nFeature, min_nCount, max_percent_mito, max_percent_ribo
-  )
-  names(info$qc_threshold) <- c(
-    "min_nFeature", "min_nCount", "max_percent_mito", "max_percent_ribo"
-  )
-  
   # compute the proportion of mito-genes expression
   if (info$Species == "mouse") {
     pattern_mt <- "^mt-"
@@ -51,13 +44,23 @@ QualityControl <- function(
     u <- sum(fivenum(x)*c(0,-n,0,1+n,0))
     return(c(l,u))
   }
-  nFeature_lu <- outlier_range(Data$nFeature_RNA,n = 3) # lower & upper
-  nCount_lu <- outlier_range(Data$nCount_RNA,n = 3)
+  max_nFeature <- outlier_range(Data$nFeature_RNA,n = 3)[2] # lower & upper
+  max_nCount <- outlier_range(Data$nCount_RNA,n = 3)[2]
   Data <- subset(
     Data,
     subset =
-      nFeature_RNA < nFeature_lu[2] &
-      nCount_RNA < nCount_lu[2]
+      nFeature_RNA < max_nFeature &
+      nCount_RNA < max_nCount
+  )
+  info$qc_threshold <- c(
+    min_nFeature, max_nFeature,
+    min_nCount, max_nCount,
+    max_percent_mito, max_percent_ribo
+  )
+  names(info$qc_threshold) <- c(
+    "min_nFeature", "max_nFeature",
+    "min_nCount", "max_nCount",
+    "max_percent_mito", "max_percent_ribo"
   )
   info$dim$filter <- dim(Data)
   names(info$dim$filter) <- c("gene", "cell")
@@ -73,12 +76,12 @@ QualityControl <- function(
   # save qc data
   info$filename$qc <- paste0(info$data_name, "_qc_seurat.rds")
   Data@tools$info <- info
-  qc_data_path <- paste0(info$dir$dir, info$filename$qc)
+  qc_data_path <- paste0(info$dir$dir,info$dir$seurat,info$filename$qc)
   saveRDS(Data, qc_data_path)
   cat("\nsave qc data to: \n", qc_data_path)
   
   # save info
-  info_path <- paste0(info$dir$dir, info$filename$info)
+  info_path <- paste0(info$dir$dir,info$dir$seurat,info$filename$info)
   saveRDS(info, info_path)
   cat("\nsave info to: \n", info_path, "\n")
   

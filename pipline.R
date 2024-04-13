@@ -11,6 +11,14 @@ Data <- ReadData_10X(
 )
 info <- Data@tools$info
 
+datadir <- "D:/Data/scRNA-seq/G_E_00012/G_E_00012_data/"
+Data <- ReadData_h5(
+  data_dir = datadir,
+  filename_prefix = "GSM4502481_chicken_heart_scRNAseq_D14_RV",
+  data_name = "D14_RV",
+  Species = "chicken"
+)
+
 # Data <- readRDS(paste0(info$dir$dir, info$filename$raw))
 Data <- QualityControl(
   Data,

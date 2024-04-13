@@ -22,7 +22,6 @@ analysis_scrnaseq <- function(
   sink(file = paste0(results_path, "analysis_log.txt"),split = TRUE)
   
   info$pc_num <- pc_num
-  info$cluster_resolution <- resolution
   info$ref_singler_dir <- ref_singler_dir
   info$ref_cell_dex <- ref_cell_dex
   info$ref_markers <- ref_markers
@@ -92,12 +91,15 @@ analysis_scrnaseq <- function(
     width = 10,height = 10
   )
   rm(clustree_plt)
-  res <- paste0("RNA_snn_res.", seq_res[which.max(stability)])
+  resolution <- seq_res[which.max(stability)]
+  info$cluster_resolution <- resolution
+  res <- paste0("RNA_snn_res.", resolution)
   Data <- AddMetaData(
     Data,
     metadata = Data@meta.data[,res],
     col.name = "seurat_clusters"
   )
+  Idents(Data) <- Data$seurat_clusters
   
   # run annotation--------------------------------------------------------------
   tryCatch({
@@ -269,7 +271,7 @@ analysis_scrnaseq <- function(
   
   # save info
   Data@tools$info <- info
-  info_path <- paste0(info$dir$dir, info$filename$info)
+  info_path <- paste0(info$dir$dir,info$dir$seurat,info$filename$info)
   saveRDS(info, info_path)
   cat("\nsave info to: \n", info_path)
   # save result Data

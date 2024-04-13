@@ -1,12 +1,9 @@
 Plot_seurat <- function(Data){
   info <- Data@tools$info
-  Results_dir <- paste0(info$dir$dir, info$dir$results)
   Data_name <- info$data_name
-  plots_dir <- paste0(Results_dir, "/plots/")
+  plots_dir <- paste0(paste0(info$dir$dir, info$dir$results), "/plots/")
   rds_dir <- paste0(info$dir$dir, info$dir$rds)
-  if(!dir.exists(plots_dir)) {
-    dir.create(plots_dir)
-  }
+  if(!dir.exists(plots_dir)) dir.create(plots_dir)
   sink(
     file = paste0(plots_dir, Data_name, "_plots_log.txt"),
     append = FALSE,
@@ -318,15 +315,14 @@ Plot_seurat <- function(Data){
       plot_de_umap,width = 12,height = 3*ncluster,limitsize = FALSE
     )
     rm(
-      i, plot_de_umap, genes, cluster_max,
+      i, plot_de_umap, genes,
       list = paste("plot_de_umap_",1:ncluster,sep = "")
     )
     
     ## heatmap-----
     plot_heatmap <- DoHeatmap(
       Data, features = cluster_max$gene, raster = FALSE
-    ) + 
-      NoLegend()
+    ) + NoLegend()
     ggsave(
       paste0(results_dir,"_heatmap.png"),
       plot_heatmap,

@@ -1,42 +1,43 @@
 merge_data <- function(seurat_objects_dir,sample_file_names, data_name) {
   seurat_objects_path <- paste0(seurat_objects_dir, sample_file_names)
-  data <- lapply(
+  Data <- lapply(
     seurat_objects_path,
     function(x){
-      data <- readRDS(x)
-      data$orig.ident <- data@tools$info$data_name
-      return(data)
+      Data <- readRDS(x)
+      Data$orig.ident <- Data@tools$info$data_name
+      return(Data)
     }
   )
-  data_name_list <- sapply(data, function(x) x@tools$info$data_name)
+  data_name_list <- sapply(Data, function(x) x@tools$info$data_name)
   cat(data_name_list,sep = "\n")
-  Species <- sapply(data, function(x){
+  Species <- sapply(Data, function(x){
     x@tools$info$Species
   })
   if(!all(Species == Species[1])) stop("Species of each sample is not same")
   
   # integrated all samples
-  data <- merge(
-    x = data[[1]], 
-    y = data[-1], 
+  Data <- merge(
+    x = Data[[1]],
+    y = Data[-1],
     # add.cell.ids = data_name_list, 
     project = data_name
   )
   
-  info <- list()
-  info$data_name <- data_name
-  info$data_dir <- seurat_objects_dir
-  info$Species <- Species[1]
-  data@tools$info <- info
-  
-  # save rds
-  saveRDS(data,file = paste0(seurat_objects_dir, data_name, "_raw_seurat.rds"))
-  cat(
-    "\n----------merge samples to",
-    paste0(data_name, "_raw_seurat.rds"),
-    "finished----------\n"
+  # save parameters to info
+  info <- saveinfo(
+    data_name = data_name,
+    data_dir = seurat_objects_dir,
+    Species = unique(Species),
+    rawdim = dim(Data)
   )
-  return(data)
+  Data@tools$info <- info
+  seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
+  dir.create(seurat_dir)
+  raw_data_path <- paste0(seurat_dir, info$filename$raw)
+  saveRDS(Data, raw_data_path)
+  cat("\nsave merged samples to: \n", raw_data_path, "\n")
+  cat("----------merge data", data_name, "finished----------\n")
+  return(Data)
 }
 
 

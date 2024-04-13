@@ -4,11 +4,12 @@ saveinfo <- function(data_name, data_dir, Species, rawdim){
   info$Species <- Species
   info$dir$dir <- paste0(dirname(data_dir), "/")
   info$dir$data <- paste0(basename(data_dir), "/")
+  info$dir$seurat <- paste0(basename(dirname(data_dir)),"_seurat/")
   info$filename$info <- paste0(data_name,"_info.rds")
   info$filename$raw <- paste0(data_name, "_raw_seurat.rds")
   info$dim$raw <- rawdim
   names(info$dim$raw) <- c("gene", "cell")
-  cat("----------create", data_name, "info----------\n")
+  cat("\n----------create", data_name, "info----------\n")
   return(info)
 }
 
@@ -67,7 +68,9 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
       rawdim = dim(Data)
     )
     Data@tools$info <- info
-    raw_data_path <- paste0(info$dir$dir, info$filename$raw)
+    seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
+    dir.create(seurat_dir)
+    raw_data_path <- paste0(seurat_dir, info$filename$raw)
     saveRDS(Data, raw_data_path)
     cat("\nsave raw data to: \n", raw_data_path, "\n")
     cat("----------Read data", filename, "finished----------\n")
@@ -77,9 +80,26 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
   }
 }
 
-ReadData_h5 <- function(data_dir, filename, data_name = "case", Species = NULL) {
-  Data <- Read10X_h5("D:/Data/scRNA-seq/GSM5229719/GSM5229719_Ch1_raw_feature_bc_matrix.h5")
+ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species = NULL) {
+  files <- list.files(data_dir)
+  filename <- files[grep(filename_prefix, files)]
+  Data <- Read10X_h5(paste0(data_dir, filename))
   Data <- CreateSeuratObject(Data)
+  # save info
+  info <- saveinfo(
+    data_name = data_name,
+    data_dir = data_dir,
+    Species = Species,
+    rawdim = dim(Data)
+  )
+  Data@tools$info <- info
+  seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
+  dir.create(seurat_dir)
+  raw_data_path <- paste0(seurat_dir, info$filename$raw)
+  saveRDS(Data, raw_data_path)
+  cat("\nsave raw data to: \n", raw_data_path, "\n")
+  cat("----------Read data", filename, "finished----------\n")
+  return(Data)
 }
 
 ReadData_csv <- function(data_dir, data_name = "case", results_dir = NULL){
