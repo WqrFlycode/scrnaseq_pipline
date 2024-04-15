@@ -9,8 +9,17 @@ saveinfo <- function(data_name, data_dir, Species, rawdim){
   info$filename$raw <- paste0(data_name, "_raw_seurat.rds")
   info$dim$raw <- rawdim
   names(info$dim$raw) <- c("gene", "cell")
-  cat("\n----------create", data_name, "info----------\n")
+  cat("\n----------create", data_name, "info----------")
   return(info)
+}
+
+saveSeuratData <- function(Data) {
+  info <- Data@tools$info
+  seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
+  if(!dir.exists(seurat_dir)) dir.create(seurat_dir)
+  raw_data_path <- paste0(seurat_dir, info$filename$raw)
+  saveRDS(Data, raw_data_path)
+  cat("\nsave raw seurat to: \n", raw_data_path, "\n")
 }
 
 ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL){
@@ -68,12 +77,8 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
       rawdim = dim(Data)
     )
     Data@tools$info <- info
-    seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
-    dir.create(seurat_dir)
-    raw_data_path <- paste0(seurat_dir, info$filename$raw)
-    saveRDS(Data, raw_data_path)
-    cat("\nsave raw data to: \n", raw_data_path, "\n")
-    cat("----------Read data", filename, "finished----------\n")
+    saveSeuratData(Data)
+    cat("----------Read 10X data", info$data_name, "finished----------\n")
     return(Data)
   }else{
     stop("Missing 10X files")
@@ -93,12 +98,8 @@ ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species =
     rawdim = dim(Data)
   )
   Data@tools$info <- info
-  seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
-  dir.create(seurat_dir)
-  raw_data_path <- paste0(seurat_dir, info$filename$raw)
-  saveRDS(Data, raw_data_path)
-  cat("\nsave raw data to: \n", raw_data_path, "\n")
-  cat("----------Read data", filename, "finished----------\n")
+  saveSeuratData(Data)
+  cat("----------Read h5 data", info$data_name, "finished----------\n")
   return(Data)
 }
 

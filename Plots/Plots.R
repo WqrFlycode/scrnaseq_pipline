@@ -4,11 +4,6 @@ Plot_seurat <- function(Data){
   plots_dir <- paste0(paste0(info$dir$dir, info$dir$results), "/plots/")
   rds_dir <- paste0(info$dir$dir, info$dir$rds)
   if(!dir.exists(plots_dir)) dir.create(plots_dir)
-  sink(
-    file = paste0(plots_dir, Data_name, "_plots_log.txt"),
-    append = FALSE,
-    split = TRUE
-  )
   
   # DimReduction----------------------------------------------------------------
   cat("\n %%%%% plot DR %%%%% \n")
@@ -501,9 +496,7 @@ Plot_seurat <- function(Data){
   }
   rm(cellchat_path)
   
-  sink()
   cat("\n %%%%% all plots finished %%%%% \n")
-  saveRDS(Data, paste0(info$results_dir, info$data_name, "_results.rds"))
 }
 
 

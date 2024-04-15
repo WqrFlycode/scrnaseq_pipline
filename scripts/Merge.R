@@ -31,11 +31,7 @@ merge_data <- function(seurat_objects_dir,sample_file_names, data_name) {
     rawdim = dim(Data)
   )
   Data@tools$info <- info
-  seurat_dir <- paste0(info$dir$dir, info$dir$seurat)
-  dir.create(seurat_dir)
-  raw_data_path <- paste0(seurat_dir, info$filename$raw)
-  saveRDS(Data, raw_data_path)
-  cat("\nsave merged samples to: \n", raw_data_path, "\n")
+  saveSeuratData(Data)
   cat("----------merge data", data_name, "finished----------\n")
   return(Data)
 }

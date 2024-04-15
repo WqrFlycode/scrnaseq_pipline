@@ -28,11 +28,11 @@ Data <- QualityControl(
 info <- Data@tools$info
 table(Data$orig.ident)
 
-# Data <- readRDS(paste0(info$dir$dir, info$filename$qc))
+# Data <- readRDS(paste0(info$dir$dir, info$dir$seurat, info$filename$qc))
 # analysis
-Data <- analysis_scrnaseq(
-  Data,
-  pc_num = 50,resolution = 0.3,
+Data <- ElementaryPipline(Data)
+Data <- AdvancedAnalysis(
+  Data, resolution = 0.6,
   # ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
   ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/",
   ref_cell_dex = "HumanPrimaryCellAtlasData",
@@ -65,5 +65,4 @@ makeShinyApp(
   shiny.dir = paste0(info$dir$dir,info$dir$results, "shinyApp/")
 ) 
 
-# 1.在clustree处断点
-# 2.读h5
+# 1.把所有的Data$seurat_clusters换成Idents(Data)

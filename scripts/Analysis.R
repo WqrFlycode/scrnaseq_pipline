@@ -1,10 +1,4 @@
-analysis_scrnaseq <- function(
-    Data,
-    pc_num = 50, resolution = 0.8,
-    ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL,
-    ncl = 1,
-    run_enrich =TRUE, run_TA = TRUE, run_CC = TRUE
-  ){
+ElementaryPipline <- function(Data) {
   info <- Data@tools$info
   data_name <- info$data_name
   
@@ -17,14 +11,6 @@ analysis_scrnaseq <- function(
   info$dir$results <- paste0(data_name, "_results/")
   results_dir <- paste0(info$dir$dir, info$dir$results)
   if (!dir.exists(results_dir)) dir.create(results_dir)
-  
-  results_path <- paste0(results_dir,data_name,"_")
-  sink(file = paste0(results_path, "analysis_log.txt"),split = TRUE)
-  
-  info$pc_num <- pc_num
-  info$ref_singler_dir <- ref_singler_dir
-  info$ref_cell_dex <- ref_cell_dex
-  info$ref_markers <- ref_markers
   
   # run Normalize-----
   cat("\n %%%%% run Normalize %%%%% \n")
@@ -45,7 +31,7 @@ analysis_scrnaseq <- function(
   )
   pc_num <- as.numeric(findPC::findPC(Data@reductions$pca@stdev))
   info$pc_num <- pc_num
-
+  
   nsample <- length(unique(Data$orig.ident))
   # 判断是否进行批次效应
   if (nsample == 1) {
@@ -68,7 +54,7 @@ analysis_scrnaseq <- function(
   cat("\n %%%%% run FindNeighbors %%%%% \n")
   Data <- FindNeighbors(Data, dims = 1:pc_num, reduction = reduction_used)
   cat("\n %%%%% run FindClusters %%%%% \n")
-  # select the number of clusters
+  # select resolution
   seq_res <- seq(0.3,1.5,0.1)
   Data <- FindClusters(
     Data, resolution = seq_res, verbose = FALSE
@@ -76,30 +62,56 @@ analysis_scrnaseq <- function(
   clustree_plt <- clustree::clustree(
     Data, prefix = paste0(DefaultAssay(Data),"_snn_res.")
   )
+  ggsave(
+    paste0(info$dir$dir, info$dir$results, info$data_name, "_clustree.svg"),
+    clustree_plt,
+    width = 10,height = 10
+  )
   stability <- sapply(
-    X = 1:13,
-    FUN = function(i) {
+    X = 1:13, function(i) {
       clustree_plt$data %>% 
         filter(RNA_snn_res. == seq_res[i]) %>% 
         select(sc3_stability) %>% 
         sum
     }
   )
-  ggsave(
-    paste0(results_dir,info$data_name,"_clustree.svg"),
-    clustree_plt,
-    width = 10,height = 10
-  )
   rm(clustree_plt)
   resolution <- seq_res[which.max(stability)]
+  cat("\nAutomatic selection of resolution:", resolution)
   info$cluster_resolution <- resolution
-  res <- paste0("RNA_snn_res.", resolution)
+  
+  info$filename$results <- paste0(info$data_name, "_results_seurat.rds")
+  Data <- SaveData(Data, info)
+  return(Data)
+}
+
+AdvancedAnalysis <- function(
+    Data, resolution,
+    ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL,
+    ncl = 1,
+    run_enrich =TRUE, run_TA = TRUE, run_CC = TRUE
+  ){
+  info <- Data@tools$info
+  data_name <- info$data_name
+  rds_dir <- paste0(info$dir$dir, info$dir$rds)
+  results_dir <- paste0(info$dir$dir, info$dir$results)
+  results_path <- paste0(results_dir,data_name,"_")
+  
+  info$ref_singler_dir <- ref_singler_dir
+  info$ref_cell_dex <- ref_cell_dex
+  info$ref_markers <- ref_markers
+  
+  # set resolution--------------------------------------------------------------
+  cat("\n %%%%% set resolution %%%%% \n")
+  metanames <- names(Data@meta.data)
+  res <- metanames[grep(resolution, metanames)]
   Data <- AddMetaData(
     Data,
     metadata = Data@meta.data[,res],
     col.name = "seurat_clusters"
   )
   Idents(Data) <- Data$seurat_clusters
+  info$cluster_resolution <- resolution
   
   # run annotation--------------------------------------------------------------
   tryCatch({
@@ -138,6 +150,9 @@ analysis_scrnaseq <- function(
     )
     rm(celltype_percent,celltype_count,xlsx_name)
   }, error = function(e){
+    run_enrich <- FALSE
+    run_TA <- FALSE
+    run_CC <- FALSE
     message("%%% annotation error %%%")
   })
   
@@ -197,12 +212,11 @@ analysis_scrnaseq <- function(
     rm(deg_path)
   }, error = function(e){
     run_enrich <- FALSE
-    run_TA <- FALSE
-    run_CC <- FALSE
     message("%%% find DEG error %%%")
   })
   
   # run enrich------------------------------------------------------------------
+  info$filename$enrich <- paste0(data_name,"_enrichment.rds")
   if(run_enrich == TRUE) {
     tryCatch({
       enrichment <- Enrich(
@@ -212,7 +226,6 @@ analysis_scrnaseq <- function(
       )
       
       # save enrichment
-      info$filename$enrich <- paste0(data_name,"_enrichment.rds")
       enrich_path <- paste0(rds_dir,info$filename$enrich)
       saveRDS(enrichment, enrich_path)
       cat("\nsave enrichment to: \n", enrich_path)
@@ -237,13 +250,13 @@ analysis_scrnaseq <- function(
   }
   
   # run TrajectoryAnalysis------------------------------------------------------
+  info$filename$cds <- paste0(data_name,"_cds.rds")
   if(run_TA == TRUE) {
     info$by_cluster <- "seurat_clusters"
     tryCatch({
       cds <- TrajectoryAnalysis(
         Data = Data, by_cluster = info$by_cluster
       )
-      info$filename$cds <- paste0(data_name,"_cds.rds")
       cds_path <- paste0(rds_dir,info$filename$cds)
       saveRDS(cds, cds_path)
       cat("\nsave cds to: \n", cds_path)
@@ -254,12 +267,12 @@ analysis_scrnaseq <- function(
   }
   
   # CellCommunication-----------------------------------------------------------
+  info$filename$cellchat <- paste0(data_name,"_cellchat.rds")
   if(run_CC == TRUE) {
     tryCatch({
       cellchat <- CellCommunication(
         Data = Data, by_cluster = "singler_by_cluster"
       )
-      info$filename$cellchat <- paste0(data_name,"_cellchat.rds")
       cellchat_path <- paste0(rds_dir,info$filename$cellchat)
       saveRDS(cellchat, cellchat_path)
       cat("\nsave cellchat to: \n", cellchat_path)
@@ -269,18 +282,22 @@ analysis_scrnaseq <- function(
     })
   }
   
+  Data <- SaveData(Data, info)
+  cat("\n %%%%% all analysis finished %%%%% \n")
+  return(Data)
+}
+
+SaveData <- function(Data, info) {
   # save info
-  Data@tools$info <- info
-  info_path <- paste0(info$dir$dir,info$dir$seurat,info$filename$info)
+  info_path <- paste0(info$dir$dir,info$dir$rds,info$filename$info)
   saveRDS(info, info_path)
   cat("\nsave info to: \n", info_path)
   # save result Data
-  info$filename$results <- paste0(data_name, "_results_seurat.rds")
-  results_data_path <- paste0(rds_dir, info$filename$results)
+  Data@tools$info <- info
+  results_data_path <- paste0(info$dir$dir, info$dir$rds, info$filename$results)
   saveRDS(Data, results_data_path)
   cat("\nsave results data to: \n", results_data_path)
-  
-  cat("\n %%%%% all analysis finished %%%%% \n")
-  sink()
   return(Data)
 }
+
+# AutomaticAnalysis <- funcion()
