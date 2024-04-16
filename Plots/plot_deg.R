@@ -1,8 +1,8 @@
-DegTwo <- function(Data, id1,id2 = NULL,group.by) {
+DegTwo <- function(Data, id1,id2 = NULL, metaname = "orig.ident") {
   deg_results <- FindMarkers(
     Data,
     ident.1 = id1, ident.2 = id2,
-    group.by = "orig.ident"
+    group.by = metaname
   )
   info <- Data@tools$info
   deg_results_dir <- paste0(info$dir$dir,info$dir$results,"deg_results/")
@@ -30,7 +30,7 @@ DegTwo <- function(Data, id1,id2 = NULL,group.by) {
   cat("save volcano to\n", volcano_path)
 }
 
-plot_heatmap <- function(Data, metaname, slot_use = "scale.data") {
+plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data") {
   if(!metaname %in% names(Data@meta.data)) stop(metaname, " is not in meta.data")
   heatmap_plot <- DoHeatmap(
     Data,

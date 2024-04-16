@@ -2,7 +2,7 @@ rm(list = ls())
 source("scripts/library_source.R")
 
 # info <- readRDS("D:/Data/scRNA-seq/case/case_info.rds")
-datadir <- "D:/Data/scRNA-seq/case/origindata/"
+datadir <- "D:/Data/scRNA-seq/case/case_origin/"
 Data <- ReadData_10X(
   data_dir = datadir,
   filename = "case",
@@ -31,7 +31,7 @@ table(Data$orig.ident)
 
 # Data <- readRDS(paste0(info$dir$dir, info$dir$seurat, info$filename$qc))
 # analysis
-Data <- ElementaryPipline(Data)
+Data <- ElementaryPipline(Data,ngenes = 3000)
 Data <- AdvancedAnalysis(
   Data, resolution = 0.8,
   # ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
@@ -67,10 +67,17 @@ makeShinyApp(
   shiny.dir = paste0(info$dir$dir,info$dir$results, "shinyApp/")
 ) 
 
+plot_heatmap(
+  Data,
+  genes = Data@assays$RNA@var.features[1:15],
+  metaname = "singler_by_cluster_main"
+)
+DegTwo(Data,id1 = "T_cells",id2 = "Monocyte",metaname = "singler_by_cluster_main")
+DegTwo(Data,id1 = "T_cells",metaname = "singler_by_cluster_main")
+
 #X1.把所有的Data$seurat_clusters换成Idents(Data)
 #√2.添加cellchat pig DB，若没有自动转为human
 #√3.根据resolution1.5进行类注释
 #X4.保存metadata.rds
 #X5.enrich_table文件夹名称
 #√6.var.feature 3000
-
