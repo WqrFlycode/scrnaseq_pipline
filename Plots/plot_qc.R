@@ -1,7 +1,7 @@
 plot_qc <- function(Data, output_dir, status) {
   cat("\n %%%%% plot QC index %%%%% \n")
   
-  results_dir <- paste0(output_dir, Data@tools$info$data_name, "_", status)
+  results_dir <- paste0(output_dir, Data@tools$info$data_name, "_", status, "_")
   
   qc_index <- c(
     "nFeature_RNA", "nCount_RNA", "percent.mito", 
@@ -32,7 +32,7 @@ plot_qc <- function(Data, output_dir, status) {
   plot_qc[[2]] <- plot_qc[[2]] + 
     scale_y_continuous(breaks = setbreak(range(Data$nCount_RNA)))
   ggsave(
-    paste0(results_dir,".png"),
+    paste0(results_dir,"violin.png"),
     plot_qc,
     width = 5+3*length(unique(Data$orig.ident)),
     height = 6 # *ceiling(length(qc_index)/3)
@@ -54,7 +54,7 @@ plot_qc <- function(Data, output_dir, status) {
       )+NoLegend()
   )
   ggsave(
-    paste0(results_dir,"_scatter.png"),
+    paste0(results_dir,"scatter.png"),
     plot_FeatureScatter,
     width = 12, height = 6
   )

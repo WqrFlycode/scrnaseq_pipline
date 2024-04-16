@@ -127,28 +127,36 @@ AdvancedAnalysis <- function(
     info$celltypes <- list(
       by_seurat = levels(Data$seurat_clusters),
       by_cell = unique(Data$singler_by_cell),
-      by_cluster = levels(Data$singler_by_cluster)
+      by_cluster_main = levels(Data$singler_by_cluster_main),
+      by_cluster_fine = levels(Data$singler_by_cluster_fine)
     )
     
     # save celltype count to xlsx
-    celltype_count <- table(Data$singler_by_cluster, Data$orig.ident)
-    celltype_percent <- apply(celltype_count, 2, prop.table)
-    celltype_percent <- round(celltype_percent, digits = 4)*1e2
-    celltype_count <- tidyr::spread(
-      as.data.frame(celltype_count), key = Var2, value = Freq
-    )
-    names(celltype_count)[1] <- "celltypes"
-    celltype_percent <- data.frame(
-      celltypes = rownames(celltype_percent),
-      as.data.frame(celltype_percent)
-    )
-    rownames(celltype_percent) <- NULL
+    CountList <- list()
+    metanames <- c("singler_by_cluster_fine","singler_by_cluster_main")
+    for(metaname in metanames) {
+      celltype_count <- table(Data@meta.data[,metaname], Data$orig.ident)
+      celltype_percent <- apply(celltype_count, 2, prop.table)
+      celltype_percent <- round(celltype_percent, digits = 4)*1e2
+      celltype_count <- tidyr::spread(
+        as.data.frame(celltype_count), key = Var2, value = Freq
+      )
+      names(celltype_count)[1] <- "celltypes"
+      CountList[[paste0(metaname,"_count")]] <- celltype_count
+      celltype_percent <- data.frame(
+        celltypes = rownames(celltype_percent),
+        as.data.frame(celltype_percent)
+      )
+      rownames(celltype_percent) <- NULL
+      CountList[[paste0(metaname,"_percent")]] <- celltype_percent
+    }
+    
     xlsx_name <- paste0(results_path,"celltype_count.xlsx")
     writexl::write_xlsx(
-      list(count = celltype_count, percent = celltype_percent),
+      CountList,
       path = xlsx_name
     )
-    rm(celltype_percent,celltype_count,xlsx_name)
+    rm(celltype_percent,celltype_count,xlsx_name, CountList)
   }, error = function(e){
     run_enrich <- FALSE
     run_TA <- FALSE
@@ -161,19 +169,19 @@ AdvancedAnalysis <- function(
   tryCatch({
     cat("\n %%%%% run FindAllMarkers by seurat cluster %%%%% \n")
     all.markers <- list()
-    Data.all.markers.by.cluster <- FindAllMarkers(
-      Data, 
-      features = Data@assays$RNA@var.features
+    metanames <- c(
+      "seurat_clusters","singler_by_cluster_fine","singler_by_cluster_main"
     )
-    all.markers$by.cluster <- Data.all.markers.by.cluster
-    
-    Idents(Data) <- Data@meta.data[,"singler_by_cluster"]
-    cat("\n %%%%% run FindAllMarkers by cell types %%%%% \n")
-    Data.all.markers.by.celltype <- FindAllMarkers(
-      Data, 
-      features = Data@assays$RNA@var.features
-    )
-    all.markers$by.celltype <- Data.all.markers.by.celltype
+    for (metaname in metanames) {
+      cat("\n %%%%% run FindAllMarkers by", metaname, "%%%%% \n")
+      Idents(Data) <- Data@meta.data[,metaname]
+      deg_results <- FindAllMarkers(
+        Data, 
+        features = Data@assays$RNA@var.features
+      )
+      all.markers[[metaname]] <- deg_results
+    }
+    Idents(Data) <- Data$seurat_clusters
     
     info$filename$all_markers <- paste0(data_name,"_all.markers.rds")
     all_markers_path <- paste0(rds_dir,info$filename$all_markers)
@@ -186,14 +194,12 @@ AdvancedAnalysis <- function(
       path = paste0(results_path,"_all.markers.xlsx")
     )
     
-    Idents(Data) <- Data$seurat_clusters
-    
     # save DEG list
     clusters <- levels(Data$seurat_clusters)
     names(clusters) <- paste0("cluster_",clusters)
     cluster_markers_list <- lapply(clusters, function(x){
       subset(
-        Data.all.markers.by.cluster,
+        all.markers$seurat_clusters,
         cluster == x,
         select = c(avg_log2FC,p_val_adj,gene)
       )
@@ -209,7 +215,7 @@ AdvancedAnalysis <- function(
     deg_path <- paste0(rds_dir,info$filename$deg)
     saveRDS(genes, deg_path)
     cat("\nsave deg to: \n", deg_path)
-    rm(deg_path)
+    rm(deg_path, all.markers, clusters)
   }, error = function(e){
     run_enrich <- FALSE
     message("%%% find DEG error %%%")
@@ -271,7 +277,7 @@ AdvancedAnalysis <- function(
   if(run_CC == TRUE) {
     tryCatch({
       cellchat <- CellCommunication(
-        Data = Data, by_cluster = "singler_by_cluster"
+        Data = Data, by_cluster = "singler_by_cluster_fine"
       )
       cellchat_path <- paste0(rds_dir,info$filename$cellchat)
       saveRDS(cellchat, cellchat_path)

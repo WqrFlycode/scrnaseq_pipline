@@ -32,7 +32,7 @@ table(Data$orig.ident)
 # analysis
 Data <- ElementaryPipline(Data)
 Data <- AdvancedAnalysis(
-  Data, resolution = 0.6,
+  Data, resolution = 0.8,
   # ref_singler_dir = "E:/Scripts/Rproject/scRNA_analysis/celldex_ref_dataset/",
   ref_singler_dir = "D:/Workspace/R/scRNA/celldex_ref_dataset/",
   ref_cell_dex = "HumanPrimaryCellAtlasData",
@@ -41,6 +41,7 @@ Data <- AdvancedAnalysis(
   run_enrich = TRUE, run_TA = TRUE, run_CC = TRUE
 )
 
+Data <- readRDS("D:/Data/scRNA-seq/case/case_rds_files/case_results_seurat.rds")
 Plot_seurat(Data = Data)
 
 info <- Data@tools$info
@@ -66,3 +67,5 @@ makeShinyApp(
 ) 
 
 # 1.把所有的Data$seurat_clusters换成Idents(Data)
+# 2.添加cellchat pig DB，若没有自动转为human
+# 5.enrich_table文件夹名称

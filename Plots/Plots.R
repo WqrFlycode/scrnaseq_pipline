@@ -142,23 +142,24 @@ Plot_seurat <- function(Data){
   }
   
   cat("\n %%%%% plot annotation by clusters %%%%% \n")
-  if ("singler_by_cluster" %in% names(Data@meta.data)){
+  metanames <- c("singler_by_cluster_main", "singler_by_cluster_fine")
+  for(metaname in metanames){
     plot_umap_all <- DimPlot(
-      Data,group.by = "singler_by_cluster", reduction = "umap",
+      Data,group.by = metaname, reduction = "umap",
       label = T , repel = T, label.size = 3, 
       raster = FALSE
     )+
       theme(legend.position = "bottom",legend.text = element_text(size = 10)) + 
       guides(color = guide_legend(ncol = 3, override.aes = list(size = 4)))
     ggsave(
-      paste0(results_dir,"_", "singler_by_cluster.png"),
+      paste0(results_dir,"_", metaname, ".png"),
       plot_umap_all, 
-      width = 10, height = 10+length(unique(Data$singler_by_cluster))/(3*5),
+      width = 10, height = 10+length(unique(Data@meta.data[,metaname]))/(3*5),
       limitsize = FALSE
     )
     if(length(unique(Data$orig.ident)) > 1){
       plot_umap <- DimPlot(
-        Data,group.by = "singler_by_cluster", reduction = "umap",
+        Data,group.by = metaname, reduction = "umap",
         split.by = "orig.ident", ncol = 2,
         label = T , repel = T, label.size = 3, 
         raster = FALSE
@@ -168,7 +169,7 @@ Plot_seurat <- function(Data){
       #                      label = T , repel = T, label.size = 5)
       # plot_cluster <- plot_umap+plot_tsne+plot_layout(guides = "collect")
       ggsave(
-        paste0(results_dir,"_", "singler_by_cluster","_samples.png"),
+        paste0(results_dir,"_", metaname,"_samples.png"),
         plot_umap,
         width = 10*2, height = 9*ceiling(length(unique(Data$orig.ident))/2) + 2, 
         limitsize = FALSE
@@ -178,47 +179,49 @@ Plot_seurat <- function(Data){
   rm(plot_umap_all)
   
   ## bar-----
-  # 样本和细胞类型交叉表
-  mydata <- table(Data$orig.ident, Data$singler_by_cluster)
-  mydata <- mydata/rowSums(mydata)
-  data <- as.data.frame(mydata)
-  rm(mydata)
-  
-  # 创建堆积图
-  plot_bar <- ggplot(data=data, aes(Var1, Freq, fill=Var2)) +
-    geom_bar(
-      stat="identity", position="stack", color="black", 
-      width=0.7, linewidth=0.25
-    ) +
-    labs(x = "", y = "Proportion %") +
-    scale_y_continuous(expand = c(0,0)) +
-    theme_classic() +
-    theme(
-      panel.background = element_rect(
-        fill="white", colour="black", linewidth = 0.25
-      ),
-      axis.line=element_line(colour="black", linewidth = 0.25),
-      axis.title=element_text(size=13, color="black"),
-      axis.text = element_text(size=12, color="black"),
-      axis.text.x = element_text(angle = 30,vjust = 0.5),
-      # legend.position= "bottom",
-      legend.title = element_blank()
+  for(metaname in metanames){
+    # 样本和细胞类型交叉表
+    mydata <- table(Data$orig.ident, Data@meta.data[,metaname])
+    mydata <- mydata/rowSums(mydata)
+    data <- as.data.frame(mydata)
+    rm(mydata)
+    
+    # 创建堆积图
+    plot_bar <- ggplot(data=data, aes(Var1, Freq, fill=Var2)) +
+      geom_bar(
+        stat="identity", position="stack", color="black", 
+        width=0.7, linewidth=0.25
+      ) +
+      labs(x = "", y = "Proportion %") +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_classic() +
+      theme(
+        panel.background = element_rect(
+          fill="white", colour="black", linewidth = 0.25
+        ),
+        axis.line=element_line(colour="black", linewidth = 0.25),
+        axis.title=element_text(size=13, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.text.x = element_text(angle = 30,vjust = 0.5),
+        # legend.position= "bottom",
+        legend.title = element_blank()
+      )
+    n_celltypes <- length(unique(data$Var2))
+    if (n_celltypes < 13) {
+      plot_bar <- plot_bar+scale_fill_manual(
+        values = RColorBrewer::brewer.pal(n_celltypes, "Set3")
+      )
+    }else{
+      plot_bar <- plot_bar+scale_fill_manual(
+        values = colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(n_celltypes)
+      )
+    }
+    ggsave(
+      paste0(results_dir,"_",metaname,"_barplot.svg"),
+      plot_bar,width = 3+1*length(unique(Data$orig.ident)),height = 5
     )
-  n_celltypes <- length(unique(data$Var2))
-  if (n_celltypes < 13) {
-    plot_bar <- plot_bar+scale_fill_manual(
-      values = RColorBrewer::brewer.pal(n_celltypes, "Set3")
-    )
-  }else{
-    plot_bar <- plot_bar+scale_fill_manual(
-      values = colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(n_celltypes)
-    )
+    rm(data, n_celltypes, plot_bar)
   }
-  ggsave(
-    paste0(results_dir,"_barplot.svg"),
-    plot_bar,width = 3+1*length(unique(Data$orig.ident)),height = 5
-  )
-  rm(data, n_celltypes, plot_bar)
   
   # Markers---------------------------------------------------------------------
   allmarkers_path <- paste0(rds_dir,info$filename$all_markers)
@@ -230,43 +233,44 @@ Plot_seurat <- function(Data){
     
     all.markers <- readRDS(allmarkers_path)
     
-    ## bubble-----
-    cluster_markers <- all.markers$by.cluster
-    cluster_max <- cluster_markers %>%
-      filter(p_val < 0.05, p_val_adj < 0.05, avg_log2FC > 0) %>%
-      group_by(cluster) %>%
-      slice_max(n = 3, order_by = avg_log2FC)
-    plot_de_dot <- DotPlot(
-      object = Data,
-      features = unique(cluster_max$gene)
-    ) + coord_flip() +
-      theme(
-        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
-        plot.background = element_rect(fill = "white")
-      )
-    ggsave(
-      paste0(results_dir,"_DEG_dots_cluster.svg"),
-      plot_de_dot,width = 9,height = 9
+    metanames <- c(
+      "singler_by_cluster_fine","singler_by_cluster_main","seurat_clusters"
     )
-    
-    celltype_markers <- all.markers$by.celltype
-    celltype_markers %>%
-      group_by(cluster) %>%
-      slice_max(n = 3, order_by = avg_log2FC) -> celltype_max
-    plot_de_dot <- DotPlot(
-      object = Data,
-      features = unique(celltype_max$gene),
-      group.by = "singler_by_cluster"
-    )+coord_flip()+
-      theme(
-        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
-        plot.background = element_rect(fill = "white")
+    for (metaname in metanames) {
+      cluster_markers <- all.markers[[metaname]]
+      cluster_max <- cluster_markers %>%
+        filter(p_val < 0.05, p_val_adj < 0.05, avg_log2FC > 0) %>%
+        group_by(cluster) %>%
+        slice_max(n = 3, order_by = avg_log2FC)
+      Idents(Data) <- Data@meta.data[,metaname]
+      ## bubble-----
+      plot_de_dot <- DotPlot(
+        object = Data,
+        features = unique(cluster_max$gene)
+      ) + coord_flip() +
+        theme(
+          axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5),
+          plot.background = element_rect(fill = "white")
+        )
+      ggsave(
+        paste0(results_dir,"_DEG_dots_",metaname,"cluster.svg"),
+        plot_de_dot,width = 9,height = 9
       )
-    ggsave(
-      paste0(results_dir,"_DEG_dots_celltype.svg"),
-      plot_de_dot,width = 9,height = 9
-    )
-    rm(plot_de_dot)
+      ## heatmap-----
+      plot_heatmap <- DoHeatmap(
+        Data, features = cluster_max$gene, raster = FALSE
+      ) + NoLegend()
+      ncluster <- length(unique(cluster_max$cluster))
+      ggsave(
+        paste0(results_dir,"_",metaname,"_heatmap.png"),
+        plot_heatmap,
+        width = ncluster, height = 2*ncluster,
+        scale = 1,
+        limitsize = FALSE
+      )
+    }
+    rm(plot_de_dot,plot_heatmap)
+    Idents(Data) <- Data$seurat_clusters
     
     ## violin-----
     clusters <- unique(cluster_max$cluster)
@@ -314,19 +318,6 @@ Plot_seurat <- function(Data){
       list = paste("plot_de_umap_",1:ncluster,sep = "")
     )
     
-    ## heatmap-----
-    plot_heatmap <- DoHeatmap(
-      Data, features = cluster_max$gene, raster = FALSE
-    ) + NoLegend()
-    ggsave(
-      paste0(results_dir,"_heatmap.png"),
-      plot_heatmap,
-      width = ncluster, height = 2*ncluster,
-      scale = 1,
-      limitsize = FALSE
-    )
-    rm(plot_heatmap)
-    
     ## volcano-----
     # volcano figure
     cluster_markers_list <- list()
@@ -356,7 +347,7 @@ Plot_seurat <- function(Data){
         bg = "white"
       )
     }
-    rm(volcano_list, clusters)
+    rm(volcano_list,clusters,all.markers,cluster_markers,cluster_markers_list,cluster_max)
   }
   rm(allmarkers_path)
   
@@ -369,6 +360,7 @@ Plot_seurat <- function(Data){
     results_dir <- paste0(results_dir, Data_name)
     
     enrich_plot <- plot_enrich(enrichment_path, results_dir)
+    rm(enrich_plot)
   }
   rm(enrichment_path)
   
@@ -411,7 +403,7 @@ Plot_seurat <- function(Data){
       plot_trojectory_pseudotime,
       width = 8, height = 5
     )
-    rm(plot_trojectory_cluster, plot_trojectory_pseudotime)
+    rm(cds,plot_trojectory_cluster, plot_trojectory_pseudotime)
   }
   rm(cds_path)
   
@@ -479,7 +471,7 @@ Plot_seurat <- function(Data){
         CellChat::netVisual_aggregate(
           cellchat,
           signaling = cellchat@netP$pathways[p],
-          vertex.receiver = 1:floor(length(info$celltypes$by_cluster)/2),
+          vertex.receiver = 1:floor(length(info$celltypes$by_cluster_fine)/2),
           layout =  "hierarchy",
           title.space = 3
         )

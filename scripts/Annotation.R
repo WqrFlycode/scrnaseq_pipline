@@ -2,15 +2,14 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
   metadata_name <- NULL
   if (!is.null(ref_singler_dir)) {
     ref <- ref_cell_dex
+    ref_celldex <- readRDS(paste0(ref_singler_dir, ref, ".rds"))
     
     metadata_name <- append(
       metadata_name,
       values = paste0("singler_by_", c("cell","cluster"))
     )
     
-    # read ref
-    ref_celldex <- readRDS(paste0(ref_singler_dir, ref, ".rds"))
-    # cell annotation------
+    # cell annotation-----------------------------------------------------------
     cat("\n %%%%% run SingleR by cell %%%%% \n")
     cell_annotation <- SingleR(
       test = Data@assays$RNA@data,
@@ -22,20 +21,38 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
       Data,metadata = cell_annotation$labels,col.name = metadata_name[1]
     )
     
-    # run cluster annotation------
-    cat("\n %%%%% run SingleR by cluster %%%%% \n")
+    # run cluster annotation----------------------------------------------------
+    cat("\n %%%%% run SingleR by cluster: main %%%%% \n")
     cluster_annotation <- SingleR(
       test = Data@assays$RNA@data,
       ref = ref_celldex,
       clusters = Data$seurat_clusters, # 按类群注释
-      assay.type.test = 1, 
+      assay.type.test = 1,
       labels = ref_celldex$label.main
     )
     clusters <- Data$seurat_clusters
     levels(clusters) <- cluster_annotation$labels
-    clusters <- factor(clusters)
-    Data <- AddMetaData(Data,metadata = clusters,col.name = metadata_name[2])
+    Data <- AddMetaData(
+      Data,
+      metadata = clusters,
+      col.name = paste0(metadata_name[2],"_main")
+    )
     
+    cat("\n %%%%% run SingleR by cluster: fine %%%%% \n")
+    cluster_annotation <- SingleR(
+      test = Data@assays$RNA@data,
+      ref = ref_celldex,
+      clusters = Data$seurat_clusters, # 按类群注释
+      assay.type.test = 1,
+      labels = ref_celldex$label.fine
+    )
+    clusters <- Data$seurat_clusters
+    levels(clusters) <- cluster_annotation$labels
+    Data <- AddMetaData(
+      Data,
+      metadata = clusters,
+      col.name = paste0(metadata_name[2],"_fine")
+    )
     # save
     # saveRDS(subset(Data@meta.data, select = metadata_name),
     #         file = annotation_dir)

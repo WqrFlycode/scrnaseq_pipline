@@ -57,9 +57,10 @@ dir <- paste0(info$dir$dir,info$dir$results,"/plots")
 剩余 **`r info$dim$filter[2]`** 个细胞。
 
 ```{r echo=FALSE}
-dir_QC <- paste0(dir, "/1_QualityControl/")
+dir_QC <- paste0(info$dir$dir, info$dir$qc)
 files <- list.files(dir_QC)
-knitr::include_graphics(paste0(dir_QC, files)[grep("after_qc", files)])
+knitr::include_graphics(paste0(dir_QC, files)[grep("raw_violin", files)])
+knitr::include_graphics(paste0(dir_QC, files)[grep("qc_violin", files)])
 ```
 
 ## 质量控制指标关系
@@ -67,7 +68,8 @@ knitr::include_graphics(paste0(dir_QC, files)[grep("after_qc", files)])
 对过滤后的细胞基因数，表达量，线粒体与核糖体比例进行比较，并利用散点图对其关系进行描述。 经过合理过滤后保留下来的细胞这四项指标之间会存在较强的相关性。 从而确保后续分析的科学性与正确性。
 
 ```{r echo=FALSE}
-knitr::include_graphics(paste0(dir_QC, files)[grep("qc_index_scatter", files)])
+knitr::include_graphics(paste0(dir_QC, files)[grep("raw_scatter", files)])
+knitr::include_graphics(paste0(dir_QC, files)[grep("qc_scatter", files)])
 ```
 
 左图是转录本数与基因数的散点图，中间是转录本总数与线粒体基因比例的散点图，右图是转录本总数与核糖体基因比例的散点图。
