@@ -1,9 +1,9 @@
-Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL){
+Annotation <- function(Data, metaname, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL){
   metadata_name <- NULL
   if (!is.null(ref_singler_dir)) {
     ref <- ref_cell_dex
     ref_celldex <- readRDS(paste0(ref_singler_dir, ref, ".rds"))
-    
+    cat("celldex:",ref)
     metadata_name <- append(
       metadata_name,
       values = paste0("singler_by_", c("cell","cluster"))
@@ -23,14 +23,15 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
     
     # run cluster annotation----------------------------------------------------
     cat("\n %%%%% run SingleR by cluster: main %%%%% \n")
+    cat("cluster:",metaname)
     cluster_annotation <- SingleR(
       test = Data@assays$RNA@data,
       ref = ref_celldex,
-      clusters = Data$seurat_clusters, # 按类群注释
+      clusters = Data@meta.data[,metaname],
       assay.type.test = 1,
       labels = ref_celldex$label.main
     )
-    clusters <- Data$seurat_clusters
+    clusters <- Data@meta.data[,metaname]
     levels(clusters) <- cluster_annotation$labels
     Data <- AddMetaData(
       Data,
@@ -42,11 +43,11 @@ Annotation <- function(Data, ref_singler_dir = NULL, ref_cell_dex = NULL, ref_ma
     cluster_annotation <- SingleR(
       test = Data@assays$RNA@data,
       ref = ref_celldex,
-      clusters = Data$seurat_clusters, # 按类群注释
+      clusters = Data@meta.data[,metaname], # 按类群注释
       assay.type.test = 1,
       labels = ref_celldex$label.fine
     )
-    clusters <- Data$seurat_clusters
+    clusters <- Data@meta.data[,metaname]
     levels(clusters) <- cluster_annotation$labels
     Data <- AddMetaData(
       Data,

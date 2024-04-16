@@ -9,16 +9,6 @@ plot_qc <- function(Data, output_dir, status) {
   )
   qc_index <- qc_index[qc_index %in% names(Data@meta.data)]
   
-  # plot violion after QC
-  plot_qc <- suppressWarnings(
-    VlnPlot(
-      Data,
-      features = qc_index,
-      group.by = "orig.ident",
-      ncol = 4,
-      raster = FALSE
-    )
-  )
   setbreak <- function(Range) {
     maxint <- signif(Range[2], digits = 1)
     intbreaks <- seq.int(0, maxint, length.out = 3)[-1]
@@ -27,17 +17,30 @@ plot_qc <- function(Data, output_dir, status) {
     breaks <- breaks[!duplicated(signif(breaks,digits = 1))]
     return(breaks)
   }
-  plot_qc[[1]] <- plot_qc[[1]] + 
-    scale_y_continuous(breaks = setbreak(range(Data$nFeature_RNA)))
-  plot_qc[[2]] <- plot_qc[[2]] + 
-    scale_y_continuous(breaks = setbreak(range(Data$nCount_RNA)))
-  ggsave(
-    paste0(results_dir,"violin.png"),
-    plot_qc,
-    width = 5+3*length(unique(Data$orig.ident)),
-    height = 6 # *ceiling(length(qc_index)/3)
-    # QC-index scatter
-  )
+  for(index in qc_index) {
+    # plot violion after QC
+    plot_qc <- suppressWarnings(
+      VlnPlot(
+        Data,
+        features = index,
+        group.by = "orig.ident",
+        # ncol = 4,
+        raster = FALSE
+      )
+    )
+    if(index %in% c("nFeature_RNA","nCount_RNA")) {
+      plot_qc <- plot_qc + 
+        scale_y_continuous(breaks = setbreak(range(Data@meta.data[,index])))
+    }
+    ggsave(
+      paste0(results_dir,index,"_violin.png"),
+      plot_qc,
+      width = 3+length(unique(Data$orig.ident)),
+      height = 6 # *ceiling(length(qc_index)/3)
+      # QC-index scatter
+    )
+  }
+  
   suppressWarnings(
     plot_FeatureScatter <- 
       FeatureScatter(

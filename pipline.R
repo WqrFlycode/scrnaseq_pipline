@@ -19,7 +19,8 @@ Data <- ReadData_h5(
   Species = "chicken"
 )
 
-# Data <- readRDS(paste0(info$dir$dir, info$filename$raw))
+Data <- readRDS(paste0(info$dir$dir, info$filename$raw))
+Data <- readRDS("D:/Data/scRNA-seq/case/case_seurat/case_qc_seurat.rds")
 Data <- QualityControl(
   Data,
   min_nFeature = 100, min_nCount = 100,
@@ -66,6 +67,10 @@ makeShinyApp(
   shiny.dir = paste0(info$dir$dir,info$dir$results, "shinyApp/")
 ) 
 
-# 1.把所有的Data$seurat_clusters换成Idents(Data)
-# 2.添加cellchat pig DB，若没有自动转为human
-# 5.enrich_table文件夹名称
+#X1.把所有的Data$seurat_clusters换成Idents(Data)
+#√2.添加cellchat pig DB，若没有自动转为human
+#√3.根据resolution1.5进行类注释
+#X4.保存metadata.rds
+#X5.enrich_table文件夹名称
+#√6.var.feature 3000
+

@@ -1,4 +1,4 @@
-ElementaryPipline <- function(Data) {
+ElementaryPipline <- function(Data, ngenes = 2000) {
   info <- Data@tools$info
   data_name <- info$data_name
   
@@ -18,7 +18,7 @@ ElementaryPipline <- function(Data) {
   
   # run find VG-----
   cat("\n %%%%% run FindVariableFeatures %%%%% \n")
-  Data <- FindVariableFeatures(Data)
+  Data <- FindVariableFeatures(Data,nfeatures = ngenes)
   
   # run Scale-----
   cat("\n %%%%% run Scale %%%%% \n")
@@ -118,6 +118,7 @@ AdvancedAnalysis <- function(
     cat("\n %%%%% run annotation %%%%% \n")
     Data <- Annotation(
       Data = Data,
+      metaname = Data$RNA_snn_res.1.5,
       ref_singler_dir = ref_singler_dir,
       ref_cell_dex = ref_cell_dex,
       ref_markers = ref_markers
@@ -191,7 +192,7 @@ AdvancedAnalysis <- function(
     
     writexl::write_xlsx(
       all.markers,
-      path = paste0(results_path,"_all.markers.xlsx")
+      path = paste0(results_path,"all.markers.xlsx")
     )
     
     # save DEG list

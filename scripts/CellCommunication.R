@@ -18,7 +18,7 @@ CellCommunication <- function(Data, by_cluster = "singler_by_cluster"){
   # cellchat <- createCellChat(object = Data, meta = Data@meta.data, group.by = by_cluster)
   
   cat("\n %%%%% input ligand-receptor database %%%%% \n")
-  if(Species == "human"){
+  if(Species %in% c("human","pig")){
     cellchat@DB <- CellChatDB.human
   } else if(Species == "mouse"){
     cellchat@DB <- CellChatDB.mouse

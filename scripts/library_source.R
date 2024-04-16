@@ -41,6 +41,7 @@ source(paste0(function_dir,"/Analysis.R"))
 function_dir <- "Plots/"
 source(paste0(function_dir,"plot_enrich.R"))
 source(paste0(function_dir,"plot_qc.R"))
+source(paste0(function_dir,"plot_deg.R"))
 source(paste0(function_dir,"Plots.R"))
 # rm(function_dir)
 

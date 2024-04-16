@@ -491,34 +491,6 @@ Plot_seurat <- function(Data){
   cat("\n %%%%% all plots finished %%%%% \n")
 }
 
-
-# data: data$p_val_adj  data$avg_log2FC data$genes
-plot_volcano <- function(data, FC = 1, PValue = 0.05, volcano_title) {
-  if (!all(c("p_val_adj", "avg_log2FC", "gene") %in% names(data)))
-    stop("colnames must contain p_val_adj, avg_log2FC, gene")
-  
-  # 判断每个基因的上下调
-  data$sig[ (-1*log10(data$p_val_adj) < -1*log10(PValue)|data$p_val_adj=="NA")|(data$avg_log2FC < FC)& data$avg_log2FC > -FC] <- "NotSig"
-  data$sig[-1*log10(data$p_val_adj) >= -1*log10(PValue) & data$avg_log2FC >= FC] <- "Up"
-  data$sig[-1*log10(data$p_val_adj) >= -1*log10(PValue) & data$avg_log2FC <= -FC] <- "Down"
-  
-  # 绘制火山图
-  volcano_plot <- ggplot(data, aes(avg_log2FC, -1*log10(p_val_adj))) +
-    geom_point(aes(color = sig)) +
-    labs(title="Volcano plot", x="log2 (FC)", y="-log10 (PValue)") +
-    geom_hline(yintercept=-log10(PValue), linetype=2) +
-    geom_vline(xintercept=c(-FC, FC), linetype=2) +
-    scale_color_manual(values=c("Up" = "#ff4757", "Down" = "#546de5", "NotSig" = "#d2dae2")) +
-    # 基因标签
-    ggrepel::geom_text_repel(
-      data = data[order(data$p_val_adj, decreasing = FALSE)[1:10], ],
-      aes(label = gene),
-      size = 3
-    ) +
-    ggtitle(volcano_title)
-  return(volcano_plot)
-}
-
 plot_enrichment <- function(genes, Species){
   if(Species == "human") {
     orgdb <- "org.Hs.eg.db"
