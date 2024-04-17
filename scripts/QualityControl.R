@@ -72,16 +72,17 @@ QualityControl <- function(
   
   plot_qc(Data, output_dir = QC_dir, status = "qc")
   
-  
+  seurat_dir <- paste0(info$dir$dir,info$dir$seurat)
+  if(!dir.exists(seurat_dir)) dir.create(seurat_dir)
   # save qc data
   info$filename$qc <- paste0(info$data_name, "_qc_seurat.rds")
   Data@tools$info <- info
-  qc_data_path <- paste0(info$dir$dir,info$dir$seurat,info$filename$qc)
+  qc_data_path <- paste0(seurat_dir,info$filename$qc)
   saveRDS(Data, qc_data_path)
   cat("\nsave qc data to: \n", qc_data_path)
   
   # save info
-  info_path <- paste0(info$dir$dir,info$dir$seurat,info$filename$info)
+  info_path <- paste0(seurat_dir,info$filename$info)
   saveRDS(info, info_path)
   cat("\nsave info to: \n", info_path, "\n")
   

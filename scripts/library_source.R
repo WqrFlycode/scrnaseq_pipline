@@ -32,7 +32,7 @@ suppressMessages(library(ShinyCell))
 function_dir <- "scripts/"
 source(paste0(function_dir,"/ReadData.R"))
 source(paste0(function_dir,"/QualityControl.R"))
-source(paste0(function_dir,"/merge.R"))
+source(paste0(function_dir,"/Merge.R"))
 source(paste0(function_dir,"/Annotation.R"))
 source(paste0(function_dir,"/Enrich.R"))
 source(paste0(function_dir,"/TrajectoryAnalysis.R"))

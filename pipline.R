@@ -74,10 +74,3 @@ plot_heatmap(
 )
 DegTwo(Data,id1 = "T_cells",id2 = "Monocyte",metaname = "singler_by_cluster_main")
 DegTwo(Data,id1 = "T_cells",metaname = "singler_by_cluster_main")
-
-#X1.把所有的Data$seurat_clusters换成Idents(Data)
-#√2.添加cellchat pig DB，若没有自动转为human
-#√3.根据resolution1.5进行类注释
-#X4.保存metadata.rds
-#X5.enrich_table文件夹名称
-#√6.var.feature 3000

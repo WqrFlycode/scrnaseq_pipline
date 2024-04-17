@@ -27,7 +27,7 @@ DegTwo <- function(Data, id1,id2 = NULL, metaname = "orig.ident") {
     width = 6, height = 6, scale = 1, 
     bg = "white"
   )
-  cat("save volcano to\n", volcano_path)
+  cat("\nsave volcano to\n", volcano_path)
 }
 
 plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data") {
@@ -56,7 +56,7 @@ plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data") {
     scale = 1,
     limitsize = FALSE
   )
-  cat("save heatmap to\n",plot_path)
+  cat("\nsave heatmap to\n",plot_path)
 }
 
 # data: data$p_val_adj  data$avg_log2FC data$gene
