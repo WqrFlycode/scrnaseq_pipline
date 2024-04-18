@@ -232,10 +232,7 @@ Plot_seurat <- function(Data){
     results_dir <- paste0(results_dir,Data_name)
     
     all.markers <- readRDS(allmarkers_path)
-    
-    metanames <- c(
-      "singler_by_cluster_fine","singler_by_cluster_main","seurat_clusters"
-    )
+    metanames <- names(all.markers)
     for (metaname in metanames) {
       cluster_markers <- all.markers[[metaname]]
       cluster_max <- cluster_markers %>%
@@ -259,12 +256,12 @@ Plot_seurat <- function(Data){
       ## heatmap-----
       plot_heatmap <- DoHeatmap(
         Data, features = cluster_max$gene, raster = FALSE
-      ) + NoLegend()
+      )
       ncluster <- length(unique(cluster_max$cluster))
       ggsave(
         paste0(results_dir,"_",metaname,"_heatmap.png"),
         plot_heatmap,
-        width = ncluster, height = 2*ncluster,
+        width = 2*ncluster, height = nrow(cluster_max),
         scale = 1,
         limitsize = FALSE
       )
