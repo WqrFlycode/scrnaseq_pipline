@@ -78,3 +78,4 @@ DegTwo(Data,id1 = "T_cells",metaname = "singler_by_cluster_main")
 # 1.allmarker.rds增加列abs(avg_log2fc)
 # 2.plot markers heatmap增加文件名
 # 3.umap图带标签
+# 4.比较findallmarker和findmarker的区别

@@ -4,6 +4,8 @@ DegTwo <- function(Data, id1,id2 = NULL, metaname = "orig.ident") {
     ident.1 = id1, ident.2 = id2,
     group.by = metaname
   )
+  deg_results$abs_avg_log2FC <- abs(deg_results$avg_log2FC)
+  deg_results$gene <- rownames(deg_results)
   info <- Data@tools$info
   deg_results_dir <- paste0(info$dir$dir,info$dir$results,"deg_results/")
   if(!dir.exists(deg_results_dir)) dir.create(deg_results_dir)
