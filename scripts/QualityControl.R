@@ -1,7 +1,8 @@
 QualityControl <- function(
     Data,
-    min_nFeature = 100, min_nCount = 100,
-    max_percent_mito = 30, max_percent_ribo = 50
+    min_nFeature = NULL, max_nFeature = NULL,
+    min_nCount = NULL, max_nCount = NULL,
+    max_percent_mito = NULL, max_percent_ribo = NULL
 ){
   info <- Data@tools$info
   # create QC dir
@@ -28,6 +29,11 @@ QualityControl <- function(
   plot_qc(Data, output_dir = QC_dir, status = "raw")
   
   # QC-----
+  if(is.null(min_nFeature)) min_nFeature = 100
+  if(is.null(min_nCount)) min_nCount = 100
+  if(is.null(max_percent_mito)) max_percent_mito = 30
+  if(is.null(max_percent_ribo)) max_percent_ribo = 50
+  
   cat("\n %%%%% run quality control %%%%% \n") # 3sigma, mad
   Data <- subset(
     Data,
@@ -44,8 +50,10 @@ QualityControl <- function(
     u <- sum(fivenum(x)*c(0,-n,0,1+n,0))
     return(c(l,u))
   }
-  max_nFeature <- outlier_range(Data$nFeature_RNA,n = 3)[2] # lower & upper
-  max_nCount <- outlier_range(Data$nCount_RNA,n = 3)[2]
+  if(is.null(max_nFeature)) {
+    max_nFeature <- outlier_range(Data$nFeature_RNA,n = 3)[2] # lower & upper
+  }
+  if(is.null(max_nCount)) max_nCount <- outlier_range(Data$nCount_RNA,n = 3)[2]
   Data <- subset(
     Data,
     subset =
