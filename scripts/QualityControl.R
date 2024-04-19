@@ -1,5 +1,5 @@
 QualityControl <- function(
-    Data,
+    Data, qc_times = 1.5,
     min_nFeature = NULL, max_nFeature = NULL,
     min_nCount = NULL, max_nCount = NULL,
     max_percent_mito = NULL, max_percent_ribo = NULL
@@ -45,7 +45,7 @@ QualityControl <- function(
     features = row.names(Data)[rowSums(GetAssayData(Data,slot = "counts")>0)>0]
   )
   # box
-  outlier_range <- function(x, n = 1.5){
+  outlier_range <- function(x, n = qc_times){
     l <- sum(fivenum(x)*c(0,1+n,0,-n,0))
     u <- sum(fivenum(x)*c(0,-n,0,1+n,0))
     return(c(l,u))

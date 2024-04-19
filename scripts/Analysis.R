@@ -89,7 +89,7 @@ AdvancedAnalysis <- function(
     Data, resolution,
     ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL,
     ncl = 1,
-    run_enrich =TRUE, run_TA = TRUE, run_CC = TRUE
+    run_enrich = FALSE, run_TA = FALSE, run_CC = FALSE
   ){
   info <- Data@tools$info
   data_name <- info$data_name
