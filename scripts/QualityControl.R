@@ -12,12 +12,40 @@ QualityControl <- function(
   
   # origin info
   # compute the proportion of mito-genes expression
-  if (info$Species == "mouse") {
-    pattern_mt <- "^mt-"
-  }else{
-    pattern_mt <- "^MT-"
-  }
-  Data[["percent.mito"]] <- PercentageFeatureSet(Data, pattern = pattern_mt)
+  mtgenes <- c(
+    # "^MT-"
+    "MT-ATP6","MT-ATP8",
+    "MT-CO1","MT-CO2","MT-CO3",
+    "MT-CYB","MT-CYTB",
+    "MT-ND1","MT-ND2","MT-ND3","MT-ND4","MT-ND4L","MT-ND5","MT-ND6",
+    
+    # "^MT"
+    "MTATP6","MTATP8",
+    "MTCO1","MTCO2","MTCO3",
+    "MTCYB","MTCYTB",
+    "MTND1","MTND2","MTND3","MTND4","MTND4L","MTND5","MTND6",
+    
+    # without "MT"
+    "ATP6","ATP8",
+    "CO1","CO2","CO3","COX1","COX2","COX3",
+    "CYB","CYTB",
+    "ND1","ND2","ND3","ND4","ND4L","ND5","ND6",
+    
+    # uppercase letters
+    "mt-Atp6","mt-Atp8",
+    "mt-Co1","mt-Co2","mt-Co3",
+    "mt-Cyb","mt-Cytb",
+    "mt-Nd1","mt-Nd2","mt-Nd3","mt-Nd4","mt-Nd4l","mt-Nd5","mt-Nd6",
+    
+    # losercase
+    "mt-atp6","mt-atp8",
+    "mt-co1","mt-co2","mt-co3",
+    "mt-cyb","mt-cytb",
+    "mt-nd1","mt-nd2","mt-nd3","mt-nd4","mt-nd4l","mt-nd5","mt-nd6"
+  )
+  included_mtgenes <- mtgenes[mtgenes %in% rownames(Data)]
+  cat("mito genes:\n");print(included_mtgenes)
+  Data[["percent.mito"]] <- PercentageFeatureSet(Data, features = included_mtgenes)
   # compute the proportion of ribo-genes expression
   Data[["percent.ribo"]] <- PercentageFeatureSet(Data, pattern = "^RP[SL]")
   # 计算红血细胞基因比例
