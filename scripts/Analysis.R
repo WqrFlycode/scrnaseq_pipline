@@ -118,7 +118,7 @@ AdvancedAnalysis <- function(
     cat("\n %%%%% run annotation %%%%% \n")
     Data <- Annotation(
       Data = Data,
-      metaname = "RNA_snn_res.1.5",
+      metaname = "seurat_clusters",
       ref_singler_dir = ref_singler_dir,
       ref_cell_dex = ref_cell_dex,
       ref_markers = ref_markers
