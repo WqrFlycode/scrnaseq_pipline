@@ -142,9 +142,9 @@ ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species 
 
 # type: SYMBOL, ENSEMBL
 transferGene <- function(genes, fromtype, totype, ref) {
-  index <- which(genes %in% ref[,fromtype]) # index of fromtype genes
+  index <- which(genes %in% ref[[fromtype]]) # index of fromtype genes
   fromtype_genes <- genes[index]
-  totype_genes <- ref[match(fromtype_genes,ref[,fromtype]),totype]
+  totype_genes <- ref[[totype]][match(fromtype_genes,ref[[fromtype]])]
   genes[index] <- totype_genes
   return(genes)
 }
