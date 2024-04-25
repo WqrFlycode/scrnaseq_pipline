@@ -103,19 +103,29 @@ ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species =
   return(Data)
 }
 
-ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species = NULL) {
+ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species = NULL, trans = FALSE) {
   files <- list.files(data_dir)
   filename <- files[grep(filename_prefix, files)]
   Data <- data.table::fread(paste0(data_dir, filename))
   print(Data[1:3,1:3]);print(dim(Data))
-  barcodes <- Data$V1
-  genes <- names(Data)[-1]
-  Data <- Data[,-1]
-  Data <- t(as.matrix(Data))
+  
+  if(trans) {
+    barcodes <- Data$V1
+    genes <- names(Data)[-1]
+    Data <- Data[,-1]
+    Data <- t(as.matrix(Data))
+  } else {
+    barcodes <- names(Data)[-1]
+    genes <- Data$V1
+    Data <- Data[,-1]
+    Data <- as.matrix(Data)
+  }
+  
   Data <- as(Data, "CsparseMatrix")
   colnames(Data) <- barcodes
   rownames(Data) <- genes
   print(Data[1:3,1:3])
+  
   Data <- CreateSeuratObject(counts = Data)
   # save info
   info <- saveinfo(
@@ -126,7 +136,7 @@ ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species 
   )
   Data@tools$info <- info
   saveSeuratData(Data)
-  cat("----------Read h5 data", info$data_name, "finished----------\n")
+  cat("----------Read count", info$data_name, "finished----------\n")
   return(Data)
 }
 
