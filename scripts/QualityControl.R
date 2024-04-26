@@ -1,5 +1,5 @@
 QualityControl <- function(
-    Data, qc_times = 1.5,
+    Data, qc_times = 3,
     min_nFeature = NULL, max_nFeature = NULL,
     min_nCount = NULL, max_nCount = NULL,
     max_percent_mito = NULL, max_percent_ribo = NULL

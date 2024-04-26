@@ -22,7 +22,7 @@ saveSeuratData <- function(Data) {
   cat("\nsave raw seurat to: \n", raw_data_path, "\n")
 }
 
-ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL){
+ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL, minfeatures = 0){
   files <- list.files(data_dir)
   exist_files <- files[grep(filename, files)]
   exist_data_names <- rep(NA, 3)
@@ -67,7 +67,7 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
     }
     
     # create Seurat object
-    Data <- CreateSeuratObject(counts = Data, project = data_name)
+    Data <- CreateSeuratObject(counts = Data, project = data_name, min.features = minfeatures)
     
     # save parameters to info
     info <- saveinfo(
@@ -85,11 +85,11 @@ ReadData_10X <- function(data_dir, filename, data_name = "case", Species = NULL)
   }
 }
 
-ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species = NULL) {
+ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species = NULL, minfeatures = 0) {
   files <- list.files(data_dir)
   filename <- files[grep(filename_prefix, files)]
   Data <- Read10X_h5(paste0(data_dir, filename))
-  Data <- CreateSeuratObject(Data)
+  Data <- CreateSeuratObject(Data, min.features = minfeatures)
   # save info
   info <- saveinfo(
     data_name = data_name,
@@ -103,7 +103,7 @@ ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species =
   return(Data)
 }
 
-ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species = NULL, trans = FALSE) {
+ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species = NULL, trans = FALSE, minfeatures = 0) {
   files <- list.files(data_dir)
   filename <- files[grep(filename_prefix, files)]
   Data <- data.table::fread(paste0(data_dir, filename))
@@ -126,7 +126,7 @@ ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species 
   rownames(Data) <- genes
   print(Data[1:3,1:3])
   
-  Data <- CreateSeuratObject(counts = Data)
+  Data <- CreateSeuratObject(counts = Data, min.features = minfeatures)
   # save info
   info <- saveinfo(
     data_name = data_name,
