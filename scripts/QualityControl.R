@@ -27,8 +27,8 @@ QualityControl <- function(
     
     # without "MT"
     "ATP6","ATP8",
-    "CO1","CO2","COII","CO3","COX1","COX2","COX3",
-    "CYB","CYTB",
+    "CO1","CO2","COII","Cu","CO3","COX1","COX2","COX3",
+    "CYB","CYTB","cytb",
     "ND1","ND2","ND3","ND4","ND4L","ND5","ND6",
     
     # uppercase letters
