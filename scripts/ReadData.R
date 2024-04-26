@@ -110,13 +110,13 @@ ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species 
   print(Data[1:3,1:3]);print(dim(Data))
   
   if(trans) {
-    barcodes <- Data$V1
+    barcodes <- Data[[1]]
     genes <- names(Data)[-1]
     Data <- Data[,-1]
     Data <- t(as.matrix(Data))
   } else {
     barcodes <- names(Data)[-1]
-    genes <- Data$V1
+    genes <- Data[[1]]
     Data <- Data[,-1]
     Data <- as.matrix(Data)
   }

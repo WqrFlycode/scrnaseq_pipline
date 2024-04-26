@@ -73,15 +73,15 @@ QualityControl <- function(
     features = row.names(Data)[rowSums(GetAssayData(Data,slot = "counts")>0)>0]
   )
   # box
-  outlier_range <- function(x, n = qc_times){
+  outlier_range <- function(x, n = 1.5){
     l <- sum(fivenum(x)*c(0,1+n,0,-n,0))
     u <- sum(fivenum(x)*c(0,-n,0,1+n,0))
     return(c(l,u))
   }
   if(is.null(max_nFeature)) {
-    max_nFeature <- outlier_range(Data$nFeature_RNA,n = 3)[2] # lower & upper
+    max_nFeature <- outlier_range(Data$nFeature_RNA,n = qc_times)[2] # lower & upper
   }
-  if(is.null(max_nCount)) max_nCount <- outlier_range(Data$nCount_RNA,n = 3)[2]
+  if(is.null(max_nCount)) max_nCount <- outlier_range(Data$nCount_RNA,n = qc_times)[2]
   Data <- subset(
     Data,
     subset =
