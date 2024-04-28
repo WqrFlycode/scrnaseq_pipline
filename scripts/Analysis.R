@@ -103,11 +103,9 @@ AdvancedAnalysis <- function(
   
   # set resolution--------------------------------------------------------------
   cat("\n %%%%% set resolution %%%%% \n")
-  metanames <- names(Data@meta.data)
-  res <- metanames[grep(resolution, metanames)]
   Data <- AddMetaData(
     Data,
-    metadata = Data@meta.data[,res],
+    metadata = Data[[paste0("RNA_snn_res.",resolution)]],
     col.name = "seurat_clusters"
   )
   Idents(Data) <- Data$seurat_clusters

@@ -110,7 +110,8 @@ ReadData_h5 <- function(data_dir, filename_prefix, data_name = "case", Species =
   return(Data)
 }
 
-ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species = NULL, trans = FALSE,
+ReadData_txt <- function(data_dir, filename_prefix, data_name = "case", Species = NULL,
+                         trans = FALSE,
                          minfeatures = 0, mincells = 0) {
   files <- list.files(data_dir)
   filename <- files[grep(filename_prefix, files)]
