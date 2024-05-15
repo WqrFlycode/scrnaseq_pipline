@@ -1,4 +1,4 @@
-ElementaryPipline <- function(Data, ngenes = 2000) {
+ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL) {
   info <- Data@tools$info
   data_name <- info$data_name
   
@@ -29,7 +29,9 @@ ElementaryPipline <- function(Data, ngenes = 2000) {
   Data <- suppressMessages(
     RunPCA(Data, features = VariableFeatures(object = Data))
   )
-  pc_num <- as.numeric(findPC::findPC(Data@reductions$pca@stdev))
+  if(is.null(pc_num)) {
+    pc_num <- as.numeric(findPC::findPC(Data@reductions$pca@stdev))
+  }
   info$pc_num <- pc_num
   
   nsample <- length(unique(Data$orig.ident))
@@ -55,7 +57,12 @@ ElementaryPipline <- function(Data, ngenes = 2000) {
   Data <- FindNeighbors(Data, dims = 1:pc_num, reduction = reduction_used)
   cat("\n %%%%% run FindClusters %%%%% \n")
   # select resolution
-  seq_res <- seq(0.3,1.5,0.1)
+  if(is.null(cl_res)) {
+    seq_res <- seq(0.1,1.5,0.1)
+  } else {
+    seq_res <- cl_res
+  }
+  
   Data <- FindClusters(
     Data, resolution = seq_res, verbose = FALSE
   )
