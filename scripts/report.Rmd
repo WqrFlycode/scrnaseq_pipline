@@ -59,8 +59,8 @@ dir <- paste0(info$dir$dir,info$dir$results,"/plots")
 ```{r echo=FALSE}
 dir_QC <- paste0(info$dir$dir, info$dir$qc)
 files <- list.files(dir_QC)
-knitr::include_graphics(paste0(dir_QC, files)[grep("raw_violin", files)])
-knitr::include_graphics(paste0(dir_QC, files)[grep("qc_violin", files)])
+knitr::include_graphics(paste0(dir_QC, files)[grep("_raw_", files)])
+knitr::include_graphics(paste0(dir_QC, files)[grep("_qc_", files)])
 ```
 
 ## 质量控制指标关系
@@ -153,7 +153,7 @@ dir_A <- paste0(dir, "/4_Annotation/")
 files <- list.files(dir_A)
 ```
 
-## 单个细胞注释
+## SingleR单个细胞注释
 
 SingleR是对单细胞转录组数据进行细胞类型自动注释的R包。
 它通过已知类型的细胞样本作为参考数据集，对数据集中与参考集相似的细胞进行标记注释。
@@ -165,23 +165,19 @@ SingleR是对单细胞转录组数据进行细胞类型自动注释的R包。
 
 3.  对所有的标签重复此操作，然后将得分最高的标签作为此细胞的注释。
 
-使用R包SingleR对细胞进行注释，SingleR提供了针对人和小鼠多种组织的细胞类型的参考数据集，可以根据实际需要选择使用，这里参考数据集分别选择MonacoImmuneData和DatabaseImmuneCellExpressionData进行注释。 
+使用R包SingleR对细胞进行注释，SingleR提供了针对人和小鼠多种组织的细胞类型的参考数据集，可以根据实际需要选择使用。 
 
 对每个细胞单独注释结果如下：
 ```{r echo=FALSE}
 knitr::include_graphics(paste0(dir_A, files)[grep("singler_by_cell", files)])
 ```
-上图为参考MonacoImmuneData的注释结果，下图为参考DatabaseImmuneCellExpressionData的注释结果。
-左侧为注释后的tSNE图，右侧为注释后的UMAP图，不同的颜色代表不同的细胞类型。
 
-## 类群注释
-下面直接对聚类后的类群进行注释。
+## SingleR类群注释
+下面对聚类后的类群进行注释，堆积图展示每类细胞的比例,横轴为样本，纵轴为细胞比例。
 ```{r echo=FALSE}
 knitr::include_graphics(paste0(dir_A, files)[grep("singler_by_cluster", files)])
 ```
-上图为参考MonacoImmuneData的注释结果，下图为参考DatabaseImmuneCellExpressionData的注释结果。
 
-堆积图展示每类细胞的比例,横轴为样本，纵轴为细胞比例。
 
 ```{r echo=FALSE}
 knitr::include_graphics(paste0(dir_A, files)[grep("barplot", files)])
@@ -214,7 +210,7 @@ knitr::include_graphics(paste0(dir_DE, files)[grep("dots_celltype", files)])
 
 下图中每行为一个类中排名前三的基因小提琴图
 ```{r echo=FALSE}
-knitr::include_graphics(paste0(dir_DE, files)[grep("deg_violin_cluster", files)])
+knitr::include_graphics(paste0(dir_DE, files)[grep("deg_violin_", files)])
 ```
 
 ## UMAP分布图
@@ -229,7 +225,7 @@ knitr::include_graphics(paste0(dir_DE, files)[grep("de_genes_umap", files)])
 ## 火山图
 
 ```{r echo=FALSE ,out.width = "50%"}
-knitr::include_graphics(paste0(dir_DE, files)[grep("volcano_cluster", files)])
+knitr::include_graphics(paste0(dir_DE, files)[grep("volcano_", files)])
 ```
 
 ## 热图
@@ -303,7 +299,7 @@ if(length(grep(filename, files)) >= 1){
 REACTOME是一个开源、人工整理并经过同行评审的通路数据库。
 目标是为各个通路提供可视化、可解释的分析，以支持基础研究、临床研究、基因组分析、建模、系统生物学等。
 ```{r echo=FALSE}
-filename <- "reactome"
+filename <- "Reactome"
 if(length(grep(filename, files)) >= 1){
   knitr::include_graphics(paste0(dir_E, files)[grep(filename, files)])
 }

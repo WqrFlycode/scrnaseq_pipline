@@ -40,7 +40,12 @@ plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data", suffix 
     slot = slot_use,
     raster = FALSE,
     group.by = metaname
-  )
+  ) + 
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(hjust = 0.5,size = 15)
+    ) + 
+    ggtitle(suffix)
   ncluster <- length(unique(Data@meta.data[,metaname]))
   
   info <- Data@tools$info
@@ -54,7 +59,7 @@ plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data", suffix 
   ggsave(
     plot_path,
     heatmap_plot,
-    width = 3+ncluster, height = length(genes),
+    width = 3+ncluster, height = length(genes)+2,
     scale = 1,
     limitsize = FALSE
   )

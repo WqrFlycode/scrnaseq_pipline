@@ -79,14 +79,14 @@ Plot_seurat <- function(Data){
       plot = plot_samples, 
       width = 3, height = 3, scale = 3
     )
-    plot_umap <- DimPlot(Data, reduction = "umap", raster = FALSE)
+    plot_umap <- DimPlot(Data, reduction = "umap", label = TRUE, raster = FALSE)
     # plot_cluster <- plot_umap+plot_layout(guides = "collect")
     ggsave(
       paste0(results_dir,"_cluster_umap.png"),
       plot_umap,
       width = 3,height = 3,scale = 3
     )
-    plot_tsne <- DimPlot(Data, reduction = "tsne",raster = FALSE)
+    plot_tsne <- DimPlot(Data, reduction = "tsne", label = TRUE, raster = FALSE)
     ggsave(
       paste0(results_dir,"_cluster_tsne.png"),
       plot_tsne,
@@ -270,7 +270,7 @@ Plot_seurat <- function(Data){
     Idents(Data) <- Data$seurat_clusters
     
     ## violin-----
-    clusters <- unique(cluster_max$cluster)
+    clusters <- as.character(unique(cluster_max$cluster))
     ncluster <- length(clusters)
     for (i in 1:ncluster) {
       genes <- cluster_max$gene[cluster_max$cluster == clusters[i]]
@@ -279,7 +279,7 @@ Plot_seurat <- function(Data){
       #          patchwork::plot_annotation(title = paste0("cluster_",i))
       # )
       ggsave(
-        paste0(results_dir,"_deg_violin_cluster_", i,".png"),
+        paste0(results_dir,"_deg_violin_", clusters[i],".png"),
         VlnPlot(
           Data, features = genes, slot = "counts", log = TRUE, raster = FALSE
         ),
@@ -324,7 +324,7 @@ Plot_seurat <- function(Data){
         cluster == clusters[i],
         select = c(avg_log2FC,p_val_adj,gene)
       )
-      names(cluster_markers_list)[i] <- paste0("cluster_",i)
+      names(cluster_markers_list)[i] <- clusters[i]
     }
     
     volcano_list <- list()
@@ -333,12 +333,12 @@ Plot_seurat <- function(Data){
         data = cluster_markers_list[[i]], 
         FC = 1, 
         PValue = 0.05,
-        volcano_title = names(cluster_markers_list)[i]
+        volcano_title = clusters[i]
       )
     }
     for (i in 1:length(volcano_list)) {
       ggsave(
-        paste0(results_dir,"_volcano_cluster",i,".png"),
+        paste0(results_dir,"_volcano_",clusters[i],".png"),
         volcano_list[[i]], 
         width = 6, height = 6, scale = 1, 
         bg = "white"

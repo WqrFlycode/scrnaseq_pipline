@@ -181,10 +181,7 @@ AdvancedAnalysis <- function(
     for (metaname in metanames) {
       cat("\n %%%%% run FindAllMarkers by", metaname, "%%%%% \n")
       Idents(Data) <- Data@meta.data[,metaname]
-      deg_results <- FindAllMarkers(
-        Data, 
-        features = Data@assays$RNA@var.features
-      )
+      deg_results <- FindAllMarkers(Data)
       all.markers[[metaname]] <- deg_results
     }
     Idents(Data) <- Data$seurat_clusters
