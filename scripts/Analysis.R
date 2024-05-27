@@ -94,6 +94,7 @@ ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL)
 
 AdvancedAnalysis <- function(
     Data, resolution,
+    metanames = c("seurat_clusters","singler_by_cluster_fine","singler_by_cluster_main"),
     ref_singler_dir = NULL, ref_cell_dex = NULL, ref_markers = NULL,
     ncl = 1,
     run_enrich = FALSE, run_TA = FALSE, run_CC = FALSE
@@ -139,7 +140,6 @@ AdvancedAnalysis <- function(
     
     # save celltype count to xlsx
     CountList <- list()
-    metanames <- c("singler_by_cluster_fine","singler_by_cluster_main")
     for(metaname in metanames) {
       celltype_count <- table(Data@meta.data[,metaname], Data$orig.ident)
       celltype_percent <- apply(celltype_count, 2, prop.table)
@@ -175,9 +175,6 @@ AdvancedAnalysis <- function(
   tryCatch({
     cat("\n %%%%% run FindAllMarkers by seurat cluster %%%%% \n")
     all.markers <- list()
-    metanames <- c(
-      "seurat_clusters","singler_by_cluster_fine","singler_by_cluster_main"
-    )
     for (metaname in metanames) {
       cat("\n %%%%% run FindAllMarkers by", metaname, "%%%%% \n")
       Idents(Data) <- Data@meta.data[,metaname]
