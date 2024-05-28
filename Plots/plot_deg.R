@@ -32,7 +32,7 @@ DegTwo <- function(Data, id1,id2 = NULL, metaname = "orig.ident") {
   cat("\nsave volcano to\n", volcano_path)
 }
 
-plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data", suffix = NULL) {
+plot_heatmap <- function(Data, genes, metaname, plot_dir = NULL, slot_use = "scale.data", suffix = NULL) {
   if(!metaname %in% names(Data@meta.data)) stop(metaname, " is not in meta.data")
   heatmap_plot <- DoHeatmap(
     Data,
@@ -49,11 +49,16 @@ plot_heatmap <- function(Data, genes, metaname, slot_use = "scale.data", suffix 
   ncluster <- length(unique(Data@meta.data[,metaname]))
   
   info <- Data@tools$info
+  if(is.null(plot_dir)) {
+    plot_dir <- paste0(
+      info$dir$dir,
+      info$dir$results,
+      "plots/",
+      "5_DifferentialExpressing/"
+    )
+  }
   plot_path <- paste0(
-    info$dir$dir,
-    info$dir$results,
-    "plots/",
-    "5_DifferentialExpressing/",
+    plot_dir,
     info$data_name,"_",metaname,"_",slot_use,"_",suffix,"_heatmap.png"
   )
   ggsave(
