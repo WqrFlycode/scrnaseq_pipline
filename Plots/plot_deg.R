@@ -100,6 +100,12 @@ plot_volcano <- function(data, FC = 1, PValue = 0.05, volcano_title) {
 
 plot_markers <- function(Data, markerlist, metaname) {
   info <- Data@tools$info
+  gene <- rownames(Data)
+  markerlist <- lapply(
+    markerlist,function(x) {
+      x[x %in% gene]
+    }
+  )
   plotdir <- paste0(info$dir$dir,info$dir$results)
   # umap
   if(!dir.exists(plotdir))
