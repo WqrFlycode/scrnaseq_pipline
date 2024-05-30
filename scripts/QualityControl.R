@@ -1,5 +1,5 @@
 QualityControl <- function(
-    Data, qc_times = 3,
+    Data, qc_times = 3, mincells = 1,
     min_nFeature = NULL, max_nFeature = NULL,
     min_nCount = NULL, max_nCount = NULL,
     max_percent_mito = NULL, max_percent_ribo = NULL
@@ -70,7 +70,9 @@ QualityControl <- function(
       nCount_RNA > min_nCount &
       percent.mito < max_percent_mito &
       percent.ribo < max_percent_ribo,
-    features = row.names(Data)[rowSums(GetAssayData(Data,slot = "counts")>0)>0]
+    features = row.names(Data)[
+      rowSums(GetAssayData(Data,slot = "counts") > 0) > mincells
+    ]
   )
   # box
   outlier_range <- function(x, n = 1.5){

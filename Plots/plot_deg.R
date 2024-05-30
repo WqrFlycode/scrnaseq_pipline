@@ -97,3 +97,65 @@ plot_volcano <- function(data, FC = 1, PValue = 0.05, volcano_title) {
     ggtitle(volcano_title)
   return(volcano_plot)
 }
+
+plot_markers <- function(Data, markerlist, metaname) {
+  info <- Data@tools$info
+  plotdir <- paste0(info$dir$dir,info$dir$results)
+  # umap
+  if(!dir.exists(plotdir))
+    stop("dir does not exist")
+  plotdir <- paste0(plotdir,info$data_name,"_markers_plots/")
+  umap_path <- paste0(
+    plotdir,
+    info$data_name,"_",metaname,"_umap.png"
+  )
+  # if(!identical(Idents(Data),Data$seurat_clusters))
+  #   stop("idents != seurat_clusters")
+  # if(!identical(Data@meta.data[["seurat_clusters"]],Data@meta.data[[metaname]]))
+  #   stop("seurat_clusters != metaname")
+  Idents(Data) <- Data@meta.data[[metaname]]
+  ggsave(
+    umap_path,
+    DimPlot(Data, reduction = "umap",label = TRUE,raster = FALSE),
+    width = 3,height = 3,scale = 3
+  )
+  cat("\nsave umap to\n",umap_path)
+  # heatmap
+  for(celltype in names(markerlist)) {
+    plot_heatmap(
+      Data = Data,
+      genes = markerlist[[celltype]],
+      metaname = metaname,
+      plot_dir = paste0(plotdir,"heatmap/"),
+      slot_use = "data",
+      suffix = celltype
+    )
+  }
+  # gene umap
+  markers <- unlist(markerlist,use.names = FALSE)
+  markers <- markers[markers %in% rownames(Data)]
+  for(gene in markers) {
+    ggsave(
+      paste0(plotdir,"markerumap/",gene,"_umap.png"),
+      FeaturePlot(
+        Data,
+        features = gene,
+        reduction = "umap",order = TRUE,pt.size = 0.01,
+        raster = FALSE
+      ),
+      width = 5,height = 5
+    )
+    cat("\nsave marker umap to\n",paste0(plotdir,"markerumap/",gene,"_umap.png"))
+    ggsave(
+      paste0(plotdir,"markerviolin/",gene,"_violin.png"),
+      VlnPlot(
+        Data,
+        features = gene,
+        # log = TRUE,
+        raster = FALSE
+      ),
+      width = 5,height = 4
+    )
+    cat("\nsave violin to\n",paste0(plotdir,"markerviolin/",gene,"_violin.png"))
+  }
+}

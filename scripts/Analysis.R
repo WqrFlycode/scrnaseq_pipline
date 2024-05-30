@@ -1,4 +1,4 @@
-ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL) {
+ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL, ncl = 1) {
   info <- Data@tools$info
   data_name <- info$data_name
   
@@ -62,18 +62,51 @@ ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL)
   } else {
     seq_res <- cl_res
   }
+  names(seq_res) <-paste0("RNA_snn_res.",seq_res)
   
-  Data <- FindClusters(
-    Data, resolution = seq_res, verbose = FALSE
+  cl <- makeCluster(ncl)
+  clusterExport(
+    cl,
+    c("seq_res", "Data"),
+    envir = environment()
   )
+  RNA_snn_res <- pbapply::pblapply(
+    X = seq_res,
+    FUN = function(res) {
+      Data <- Seurat::FindClusters(
+        Data, resolution = res, verbose = FALSE
+      )
+      RNA_snn_res <- Data@meta.data[[paste0("RNA_snn_res.",res)]]
+      return(RNA_snn_res)
+    },
+    cl = cl
+  )
+  stopCluster(cl)
+  Data@meta.data <- data.frame(Data@meta.data,RNA_snn_res)
+  rm(RNA_snn_res)
+  
+  res_dir <- paste0(info$dir$dir,info$dir$results,"all_res/")
+  mkdirs(paste0(res_dir,"umap_res_all/"))
   clustree_plt <- clustree::clustree(
     Data, prefix = paste0(DefaultAssay(Data),"_snn_res.")
   )
   ggsave(
-    paste0(info$dir$dir, info$dir$results, info$data_name, "_clustree.svg"),
+    paste0(res_dir, info$data_name, "_clustree.svg"),
     clustree_plt,
     width = 10,height = 10
   )
+  res <- names(Data@meta.data)[grep("RNA_snn_res.",names(Data@meta.data))]
+  for(i in 1:15) {
+    umap_path <- paste0(res_dir,"umap_res_all/",info$data_name,"_res_",i,"_umap.png")
+    Idents(Data) <- Data@meta.data[[res[i]]]
+    ggsave(
+      umap_path,
+      DimPlot(Data, reduction = "umap",label = TRUE,raster = FALSE),
+      width = 6,height = 6
+    )
+  }
+  cat("\nsave umap to\n",res_dir)
+  
   stability <- sapply(
     X = 1:13, function(i) {
       clustree_plt$data %>% 
@@ -170,17 +203,14 @@ AdvancedAnalysis <- function(
     message("%%% annotation error %%%")
   })
   
-  
   # run find marker-------------------------------------------------------------
   tryCatch({
-    cat("\n %%%%% run FindAllMarkers by seurat cluster %%%%% \n")
-    all.markers <- list()
-    for (metaname in metanames) {
-      cat("\n %%%%% run FindAllMarkers by", metaname, "%%%%% \n")
-      Idents(Data) <- Data@meta.data[,metaname]
-      deg_results <- FindAllMarkers(Data)
-      all.markers[[metaname]] <- deg_results
-    }
+    metanameUse <- sapply(
+      metanames, 
+      FUN = function(x) length(levels(Data@meta.data[[x]])) > 1
+    )
+    metanames <- metanames[metanameUse]
+    all.markers <- FindDEG(seurat_object = Data,metanames = metanames,ncl = ncl)
     Idents(Data) <- Data$seurat_clusters
     
     info$filename$all_markers <- paste0(data_name,"_all.markers.rds")
