@@ -106,6 +106,7 @@ plot_markers <- function(Data, markerlist, metaname) {
       x[x %in% gene]
     }
   )
+  markerlist <- markerlist[sapply(markerlist,length) != 0]
   plotdir <- paste0(info$dir$dir,info$dir$results)
   # umap
   if(!dir.exists(plotdir))
