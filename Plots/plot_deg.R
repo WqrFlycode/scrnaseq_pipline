@@ -64,7 +64,7 @@ plot_heatmap <- function(Data, genes, metaname, plot_dir = NULL, slot_use = "sca
   ggsave(
     plot_path,
     heatmap_plot,
-    width = 3+ncluster, height = length(genes)+2,
+    width = 3+ncluster, height = length(genes)+3,
     scale = 1,
     limitsize = FALSE
   )
@@ -161,7 +161,7 @@ plot_markers <- function(Data, markerlist, metaname) {
         # log = TRUE,
         raster = FALSE
       ),
-      width = 5,height = 4
+      width = 5,height = 5
     )
     cat("\nsave violin to\n",paste0(plotdir,"markerviolin/",gene,"_violin.png"))
   }

@@ -3,6 +3,11 @@ FindDEG <- function(seurat_object, metanames = NULL, ncl = 1){
   all.markers <- list()
   for (metaname in metanames) {
     cat("\n %%%%% run FindMarkers by", metaname, "%%%%% \n")
+    if(!class(seurat_object@meta.data[[metaname]]) == "factor") {
+      seurat_object@meta.data[[metaname]] <- as.factor(
+        seurat_object@meta.data[[metaname]]
+      )
+    }
     Seurat::Idents(seurat_object) <- seurat_object@meta.data[[metaname]]
     clusterName <- levels(seurat_object@meta.data[[metaname]])
     names(clusterName) <- clusterName
