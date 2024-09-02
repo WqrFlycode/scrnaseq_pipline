@@ -12,7 +12,7 @@ Annotation <- function(Data, metaname, ref_singler_dir = NULL, ref_cell_dex = NU
     # cell annotation-----------------------------------------------------------
     cat("\n %%%%% run SingleR by cell %%%%% \n")
     cell_annotation <- SingleR(
-      test = Data@assays$RNA@data,
+      test = LayerData(Data,layer = "data"),
       ref = ref_celldex,
       assay.type.test = 1, 
       labels = ref_celldex$label.fine
@@ -25,7 +25,7 @@ Annotation <- function(Data, metaname, ref_singler_dir = NULL, ref_cell_dex = NU
     cat("\n %%%%% run SingleR by cluster: main %%%%% \n")
     cat("cluster:",metaname)
     cluster_annotation <- SingleR(
-      test = Data@assays$RNA@data,
+      test = LayerData(Data,layer = "data"),
       ref = ref_celldex,
       clusters = Data@meta.data[,metaname],
       assay.type.test = 1,
@@ -41,7 +41,7 @@ Annotation <- function(Data, metaname, ref_singler_dir = NULL, ref_cell_dex = NU
     
     cat("\n %%%%% run SingleR by cluster: fine %%%%% \n")
     cluster_annotation <- SingleR(
-      test = Data@assays$RNA@data,
+      test = LayerData(Data,layer = "data"),
       ref = ref_celldex,
       clusters = Data@meta.data[,metaname], # 按类群注释
       assay.type.test = 1,

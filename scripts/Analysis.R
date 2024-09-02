@@ -1,4 +1,4 @@
-ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL, ncl = 1) {
+ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, ncl = 1) {
   info <- Data@tools$info
   data_name <- info$data_name
   
@@ -29,10 +29,7 @@ ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL,
   Data <- suppressMessages(
     RunPCA(Data, features = VariableFeatures(object = Data))
   )
-  if(is.null(pc_num)) {
-    pc_num <- as.numeric(findPC::findPC(Data@reductions$pca@stdev))
-  }
-  info$pc_num <- pc_num
+  
   
   nsample <- length(unique(Data$orig.ident))
   # 判断是否进行批次效应
@@ -45,6 +42,62 @@ ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL,
     cat("\n %%%%% run Harmony %%%%% \n")
     Data <- suppressWarnings(harmony::RunHarmony(Data, "orig.ident"))
     reduction_used <- "harmony"
+  }
+  
+  cat("\n %%%%% plot UMAP for n pc %%%%% \n")
+  if(is.null(pc_num)) {
+    pc_seq <- seq(10,50,10)
+  } else {
+    pc_seq <- pc_num
+  }
+  names(pc_seq) <- paste(pc_seq, "pc")
+  
+  cl <- makeCluster(ncl)
+  clusterExport(
+    cl,
+    c("pc_seq", "Data","reduction_used"),
+    envir = environment()
+  )
+  umaplist <- pbapply::pblapply(
+    X = pc_seq,
+    FUN = function(n) {
+      Data <- Seurat::RunUMAP(Data, dims = 1:n, reduction = reduction_used)
+      umapplot <- Seurat::DimPlot(
+        Data, reduction = "umap",label = TRUE,raster = FALSE
+      ) + ggplot2::labs(title = paste(n, "pc"))
+      return(umapplot)
+    },
+    cl = cl
+  )
+  stopCluster(cl)
+  pc_dir <- paste0(info$dir$dir,info$dir$results,"umap_npc/")
+  mkdirs(pc_dir)
+  ggsave(
+    paste0(info$dir$dir,info$dir$results,"umap_npc/ElbowPlot.png"),
+    ElbowPlot(Data,ndims = 50,reduction = reduction_used),
+    width = 6,height = 6,bg = "white"
+  )
+  for(npc in pc_seq) {
+    umap_path <- paste0(pc_dir,info$data_name,"_",npc,"_pc_","_umap.png")
+    ggsave(
+      umap_path,
+      umaplist[[paste(npc,"pc")]],
+      width = 6,height = 6
+    )
+  }
+  cat("\nsave umap to\n",pc_dir)
+  
+  Data@tools$info <- info
+  return(Data)
+}
+
+DetermineCluster <- function(Data, pc_num, cl_res = NULL, ncl = 1){
+  info <- Data@tools$info
+  info$pc_num <- pc_num
+  if("harmony" %in% Reductions(Data)){
+    reduction_used <- "harmony"
+  }else{
+    reduction_used <- "pca"
   }
   
   cat("\n %%%%% run UMAP %%%%% \n")
@@ -121,7 +174,8 @@ ElementaryPipline <- function(Data, ngenes = 2000, pc_num = NULL, cl_res = NULL,
   info$cluster_resolution <- resolution
   
   info$filename$results <- paste0(info$data_name, "_results_seurat.rds")
-  Data <- SaveData(Data, info)
+  # Data <- SaveData(Data, info)
+  Data@tools$info <- info
   return(Data)
 }
 
@@ -337,3 +391,4 @@ SaveData <- function(Data, info) {
 }
 
 # AutomaticAnalysis <- funcion()
+

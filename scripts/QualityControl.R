@@ -71,7 +71,7 @@ QualityControl <- function(
       percent.mito < max_percent_mito &
       percent.ribo < max_percent_ribo,
     features = row.names(Data)[
-      rowSums(GetAssayData(Data,slot = "counts") > 0) > mincells
+      rowSums(GetAssayData(Data, layer= "counts") > 0) >= mincells
     ]
   )
   # box
